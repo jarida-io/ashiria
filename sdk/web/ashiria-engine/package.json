@@ -1,0 +1,16 @@
+{
+  "name": "@ashiria/engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ashiria hand-sign engine for the web (WebXR): a port of training/ (Python reference), parity-tested on spec/golden.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=23.6"
+  }
+}

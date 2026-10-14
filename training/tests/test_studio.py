@@ -84,3 +84,19 @@ def test_import_studio(tmp_path):
     assert len(json.loads((out / "attempts.json").read_text())["attempts"]) == 2
     loaded = load_studio(out / "store.json")
     assert loaded["fist"].kind == "studio" and len(loaded["fist"].takes[0].segment) == 32
+
+
+def test_webxr_layout_take_matches_openxr(tmp_path):
+    seg = sign_stream(FLAT, path=(0.3, 0, 0))
+    take = fake_take(seg, "flat", np.random.default_rng(4))
+    n = take["frames"]["n"]
+    web = json.loads(json.dumps(take))
+    web["joint_layout"] = "webxr25"
+    for side in ("right", "left"):
+        web["frames"][side]["pos"] = np.asarray(take["frames"][side]["pos"]).reshape(n, 26, 3)[:, 1:].ravel().tolist()
+        web["frames"][side]["rot"] = np.asarray(take["frames"][side]["rot"]).reshape(n, 26, 4)[:, 1:].ravel().tolist()
+    a, b = tmp_path / "a.json", tmp_path / "b.json"
+    a.write_text(json.dumps(take))
+    b.write_text(json.dumps(web))
+    x, y = canonical_from_raw(load_take(a)), canonical_from_raw(load_take(b))
+    assert np.allclose(x.hand_rel, y.hand_rel) and np.allclose(x.wrist_pos, y.wrist_pos)

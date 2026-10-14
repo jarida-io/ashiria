@@ -33,7 +33,7 @@ A take keeps **both** the raw tracking and the canonical frames the app computed
   "shoulder_width_m": 0.38, "shoulder_calibrated": false,
   "rest_height": -1.5,                 // the signer's rest level (shoulder widths), from onboarding
   "device": "Quest 3S", "app_version": "0.1.0",
-  "spec_version": 1, "runtime_version": 1, "joint_layout": "openxr26",
+  "spec_version": 1, "runtime_version": 1, "joint_layout": "webxr25",   // or "openxr26"
   "tick_hz": 30, "recorded_at": "2026-11-02T10:15:00Z",
   "trim": {"start": 12, "end": 88},    // frames kept, end exclusive (Studio's auto cut, adjustable)
   "status": "keep",                    // keep | reject
@@ -43,8 +43,8 @@ A take keeps **both** the raw tracking and the canonical frames the app computed
     "head_pos": [...], "head_rot": [...],         // n×3 and n×4 (x, y, z, w), Unity world space
     "right": {
       "tracked": [...], "high_conf": [...], "inferred": [...], "system_gesture": [...],  // n values, 0/1
-      "pos": [...],                                // n×26×3 metres, Unity world space, OpenXR joint order
-      "rot": [...]                                 // n×26×4 (x, y, z, w)
+      "pos": [...],                                // n×J×3 metres, left-handed world space, layout joint order
+      "rot": [...]                                 // n×J×4 (x, y, z, w)
     },
     "left": { "...": "same as right" },
     "canonical": {"hand_rel": [...], "wrist_pos": [...], "present": [...]}   // n×2×21×3, n×2×3, n×2
@@ -52,9 +52,15 @@ A take keeps **both** the raw tracking and the canonical frames the app computed
 }
 ```
 
-All arrays are flat, row-major, in the order the shapes are written. World space is Unity's
-(left-handed: x right, y up, z forward), in metres. Joint positions must be world-space poses
-(`OVRBone.Transform.position` or the Interaction SDK's `IHand.GetJointPose`), never local positions.
+All arrays are flat, row-major, in the order the shapes are written.
+
+**Joint layouts:** `webxr25` (J = 25: WebXR Hand Input, `wrist` … `pinky-finger-tip`) or `openxr26` (J = 26:
+OpenXR, palm first). WebXR's joints are OpenXR's without the palm, so WebXR index = OpenXR index − 1.
+
+**World space** is left-handed (x right, y up, z forward), in metres, as Unity's. WebXR is right-handed (z points
+backwards), so the web app converts every position (x, y, z) → (x, y, −z) and every rotation (x, y, z, w) →
+(−x, −y, z, w) before recording. Joint positions must be world-space poses (WebXR `XRFrame.getJointPose` against
+the `local-floor` space, or `OVRBone.Transform.position` in Unity), never local positions.
 
 ## Rules
 

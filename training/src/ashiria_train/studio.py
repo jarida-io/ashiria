@@ -28,6 +28,7 @@ from .references import tag
 FORMAT = "ashiria.studio-take"
 FORMAT_VERSION = 1
 SIDES = ("right", "left")
+LAYOUTS = {"openxr26": 26, "webxr25": 25}  # Quest native (OpenXR) or WebXR Hand Input (OpenXR without the palm)
 MIN_PRESENT, MIN_SECONDS, MAX_SECONDS = 0.8, 0.3, 5.0
 PARITY_TOL = 1e-3
 
@@ -49,8 +50,10 @@ def load_take(file: Path) -> dict:
         raise TakeError("not an Ashiria Studio take")
     if take.get("format_version") != FORMAT_VERSION:
         raise TakeError(f"format_version {take.get('format_version')} (this importer reads {FORMAT_VERSION})")
-    if take.get("joint_layout") != "openxr26":
-        raise TakeError(f"joint layout {take.get('joint_layout')!r}")
+    layout = take.get("joint_layout")
+    if layout not in LAYOUTS:
+        raise TakeError(f"joint layout {layout!r} (expected {' or '.join(LAYOUTS)})")
+    joints = LAYOUTS[layout]
     for key in ("take_id", "sign_id", "signer", "handedness", "tick_hz", "frames"):
         if key not in take:
             raise TakeError(f"missing {key}")
@@ -61,7 +64,10 @@ def load_take(file: Path) -> dict:
     take["_head_pos"], take["_head_rot"] = _arr(f["head_pos"], (n, 3)), _arr(f["head_rot"], (n, 4))
     for side in SIDES:
         h = f[side]
-        take[f"_{side}"] = {"pos": _arr(h["pos"], (n, 26, 3)),
+        pos = _arr(h["pos"], (n, joints, 3))
+        if joints == 25:  # WebXR has no palm joint: put a placeholder where OpenXR's palm (0) goes; it is never used
+            pos = np.concatenate([np.zeros((n, 1, 3)), pos], axis=1)
+        take[f"_{side}"] = {"pos": pos,
                             **{k: _arr(h[k], (n,)) > 0.5 for k in ("tracked", "high_conf", "inferred", "system_gesture")}}
     c = f.get("canonical")
     take["_canonical"] = None if not c else Segment(_arr(c["hand_rel"], (n, 2, 21, 3)), _arr(c["wrist_pos"], (n, 2, 3)),
