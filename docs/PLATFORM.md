@@ -13,14 +13,14 @@ Every app uses the same five parts, so a sign recorded, reviewed or improved onc
 | # | Part | What it is | Lives in |
 |---|---|---|---|
 | 1 | **Sign catalogue** | One record per sign (fields below), shipped as versioned **content packs** (e.g. `ksl-core-v1`) that apps download or bundle | `content/` |
-| 2 | **Hand-sign engine** | The input contract (feature spec) plus four functions, built once per platform (below) | `spec/`, `sdk/unity/`, `sdk/android/`, `training/` (Python reference) |
-| 3 | **Models** | Trained recognisers exported to ONNX (Sentis on Quest, ONNX Runtime or LiteRT on Android), each with metadata and golden test vectors | built by `training/`, shipped in content packs |
+| 2 | **Hand-sign engine** | The input contract (feature spec) plus four functions, built once per platform (below) | `spec/`, `sdk/web/` (TypeScript, the Quest app), `sdk/unity/` (C#, fallback), `sdk/android/`, `training/` (Python reference) |
+| 3 | **Models** | Trained recognisers exported to ONNX (ONNX Runtime Web on Quest, ONNX Runtime or LiteRT on Android), each with metadata and golden test vectors | built by `training/`, shipped in content packs |
 | 4 | **Data pipeline** | Ingest (dictionary, phone contributions, Studio recordings) → landmarks → Deaf review → references and content packs → training → evaluation → export | `training/` |
 | 5 | **Contribution service** | Our own **PocketBase** server (self-hosted): contributor accounts, uploads, consent records, the review queue for Deaf validators, and content-pack hosting. Apps talk to its REST API | `services/` |
 
 **Catalogue fields:** ID, glosses, category, description, tier (scored, lenient or watch-only), tags (hands, movement, near face), source and rights, reviewer approval, plus its reference recordings and video.
 
-**Engine functions, one implementation per platform (Python, C#, Kotlin):**
+**Engine functions, one implementation per platform (Python reference, TypeScript for WebXR, C# fallback, later Kotlin):**
 - **Verify:** is this sign X? Reference matching with per-finger feedback.
 - **Recognise:** which sign is this? Nearest reference now, a trained model later.
 - **Tune:** per-user tolerances, kept on the user's device.
@@ -73,9 +73,10 @@ ashiria/
   spec/                 shared contracts: FEATURE_SPEC.md, joints.json (exist), catalogue schema
   content/              sign catalogue and content-pack manifests (generated packs are not committed)
   training/             Python pipeline (exists): ingest, extract, references, train, export
-  sdk/unity/            C# engine: adapters, features, verify, recognise, tune, Sentis runner
+  sdk/web/              TypeScript engine for the WebXR app (parity-tested)
+  sdk/unity/            C# engine (Unity fallback, parity-tested)
   sdk/android/          Kotlin engine: MediaPipe adapter, features, verify, recognise, model runner
-  apps/quest-learn/     Unity project: Ashiria Learn, plus Studio as a contributor-only build
+  apps/quest-learn/     WebXR app (Immersive Web SDK): Ashiria Learn, plus Studio in development builds
   apps/android/         Contribute and Interpret
   services/             contribution and content-pack backend
 ```
@@ -86,7 +87,7 @@ ashiria/
 
 | Phase | When | Delivers |
 |---|---|---|
-| **1. Hackathon** | Now to 18 Nov | Shared infrastructure: `spec` v1, catalogue for about 50 signs, references (dictionary drafts → Studio recordings), C# engine (verify and recognise). **Ashiria Learn** with Free Sign. **Studio** as an internal tool that saves on the headset (files pulled over USB). The competition build stays offline with no backend |
+| **1. Hackathon** | Now to 18 Nov | Shared infrastructure: `spec` v1, catalogue for about 50 signs, references (dictionary drafts → Studio recordings), TypeScript engine (verify and recognise). **Ashiria Learn** (WebXR) with Free Sign. **Studio** in development builds, saving takes to the Mac through the dev server. The competition build stays offline with no backend |
 | **2. Platform** | Dec 2026 to Feb 2027 | PocketBase service (contributor accounts, uploads, review queue, content packs), Studio uploads, content-pack updates in Learn, Quest store launch |
 | **3. Android (last)** | 2027 | Contribute and Interpret (from the 2025 phone app), phone contributions, first trained model (recognition v2), camera-based reading of another signer on Quest |
 
