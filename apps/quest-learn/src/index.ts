@@ -17,6 +17,8 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, proje
   world.registerSystem(HandSamplerSystem);
   world.registerSystem(ShadowHandsSystem);
   world.registerSystem(LessonSystem);
+  // Development builds only: handles for scripted tests in the IWSDK emulator.
+  if (import.meta.env.DEV) Object.assign(window, { __ashiria: { world, app, HandSamplerSystem, LessonSystem } });
   // Installed app (packaged PWA on Quest): tapping the icon is the user's go-ahead, so enter mixed reality
   // straight away. Only the installed app has getDigitalGoodsService; a browser tab keeps its Start button.
   const nav = navigator as Navigator & { xr?: { isSessionSupported?: (mode: string) => Promise<boolean> } };

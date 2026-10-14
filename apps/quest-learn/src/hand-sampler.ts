@@ -9,8 +9,8 @@
 import {
   AttemptSegmenter, emptyFrame, forwardFromQuaternion, FrameBuilder, TickClock, type Attempt, type Frame, type HandInput, type V3,
 } from '@ashiria/engine';
-import { createSystem } from '@iwsdk/core';
-import { app } from './app-state.js';
+import { createSystem, VisibilityState } from '@iwsdk/core';
+import { app, STUDIO_ENABLED } from './app-state.js';
 
 const JOINTS = 25;
 const RING = 300; // 10 s of raw samples at 30 Hz, for Studio
@@ -67,6 +67,13 @@ export class HandSamplerSystem extends createSystem({}) {
 
   /** The most recent canonical frame (for the debug readout and the shadow hands). */
   lastFrame: Frame = emptyFrame();
+  /** Controllers are connected and no hand is tracked (the user should put them down). */
+  controllersOnly = false;
+  /** Seconds since a hand was last tracked (while in XR). */
+  sinceHand = 0;
+  /** The current attempt state: 'idle' | 'active' | 'cooldown'. */
+  get attemptState() { return this.segmenter.state; }
+  private blurred = false;
   get axes() { return this.builder.axes; }
   get headPosition(): Float64Array { return this.latest.head; }
 
@@ -92,7 +99,19 @@ export class HandSamplerSystem extends createSystem({}) {
     const frame = this.xrFrame;
     const ref = this.xrManager?.getReferenceSpace();
     if (!frame || !ref) { this.clock.reset(); return; }
+    // Paused (system menu, a permission prompt): drop any half-made attempt and wait.
+    if (this.world.visibilityState.peek() !== VisibilityState.Visible) {
+      if (!this.blurred) { this.blurred = true; this.resetSegmenter(); }
+      this.clock.reset();
+      return;
+    }
+    this.blurred = false;
     this.sample(frame, ref);
+    const handTracked = this.latest.right.tracked || this.latest.left.tracked;
+    this.sinceHand = handTracked ? 0 : this.sinceHand + delta;
+    let controllers = false;
+    for (const source of frame.session.inputSources) if (source.gamepad && !source.hand) controllers = true;
+    this.controllersOnly = controllers && !handTracked;
     const ticks = this.clock.advance(delta);
     for (let i = 0; i < ticks && this.latest.valid; i++) this.step();
   }
@@ -146,13 +165,13 @@ export class HandSamplerSystem extends createSystem({}) {
     const head: V3 = [s.head[0], s.head[1], s.head[2]];
     const f = this.builder.build(head, fwd, this.inputs.right, this.inputs.left, settings.leftHanded, settings.shoulderWidth, emptyFrame());
     this.lastFrame = f;
-    this.ring.push({
+    if (STUDIO_ENABLED) this.ring.push({
       tick: this.tick, time: this.tick / this.clock.hz, head: s.head.slice(), headRot: s.headRot.slice(),
       hands: { right: { tracked: s.right.tracked, pos: s.right.pos.slice(), rot: s.right.rot.slice() },
                left: { tracked: s.left.tracked, pos: s.left.pos.slice(), rot: s.left.rot.slice() } },
       frame: f,
     });
-    if (this.ring.length > RING) this.ring.shift();
+    if (this.ring.length > RING) this.ring.shift();  // Studio only: raw samples for saving takes
     const attempt = this.segmenter.push(f);
     if (attempt) this.listeners.forEach((fn) => fn(attempt));
   }

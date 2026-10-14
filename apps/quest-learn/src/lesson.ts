@@ -3,7 +3,7 @@
  * (development: save the team's takes). Drives the lesson panel and the shadow-hand highlights.
  */
 import { hintText, lookalikesOf, prepare, recognise, restHeight, verify, type Attempt } from '@ashiria/engine';
-import { createSystem, FollowBehavior, Follower, VisibilityState, type UIKitMLAsset } from '@iwsdk/core';
+import { createSystem, FollowBehavior, Follower, RayInteractable, VisibilityState, type UIKitMLAsset } from '@iwsdk/core';
 import { app, STUDIO_ENABLED } from './app-state.js';
 import { HandSamplerSystem } from './hand-sampler.js';
 import { ShadowHandsSystem } from './shadow-hands.js';
@@ -23,13 +23,16 @@ export class LessonSystem extends createSystem({}) {
   private infoTimer = 0;
   private calibrating: { start: number; samples: number[] } | null = null;
   private deleteArmedUntil = 0;
+  private fps = 0;
+  private controllerHint = false;
 
   init(): void {
     const panel = this.world.getSceneObject<UIKitMLAsset>('lesson-panel');
     if (!panel) return;
-    // Keep the panel to the left of the user's view, at arm's reach, whether they sit or stand.
-    this.world.getSceneEntity('lesson-panel')?.addComponent(Follower, {
-      target: this.player.head, offsetPosition: [-0.38, -0.3, -0.62], behavior: FollowBehavior.PivotY,
+    // Keep the panel to the left of the user's view, within reach for poking, whether they sit or stand.
+    const panelEntity = this.world.getSceneEntity('lesson-panel');
+    panelEntity?.addComponent(Follower, {
+      target: this.player.head, offsetPosition: [-0.3, -0.28, -0.48], behavior: FollowBehavior.PivotY,
     });
     for (const id of ['unit', 'gloss', 'mode', 'status', 'hint', 'info', 'mode-label', 'hand-label', 'strict-label', 'delete-label',
       'rest-label', 'btn-prev', 'btn-next', 'btn-mode', 'btn-rest', 'btn-hand', 'btn-strict', 'btn-delete', 'xr-button', 'exit-button'])
@@ -68,6 +71,11 @@ export class LessonSystem extends createSystem({}) {
         const flat = v === VisibilityState.NonImmersive;
         this.el['xr-button']?.setProperties({ display: flat ? 'flex' : 'none' });
         this.el['exit-button']?.setProperties({ display: flat ? 'none' : 'flex' });
+        // In the headset the panel is poke-only: a pinch-shaped sign (O, F, D, 9) must never click it.
+        // The desktop view keeps mouse clicks (RayInteractable also carries canvas pointer input).
+        if (!panelEntity) return;
+        if (flat && !panelEntity.hasComponent(RayInteractable)) panelEntity.addComponent(RayInteractable);
+        if (!flat && panelEntity.hasComponent(RayInteractable)) panelEntity.removeComponent(RayInteractable);
       }));
     } else {
       this.el['xr-button']?.setProperties({ display: 'none' });
@@ -133,12 +141,20 @@ export class LessonSystem extends createSystem({}) {
       }
     }
     if (this.deleteArmedUntil && time > this.deleteArmedUntil) { this.deleteArmedUntil = 0; this.set('delete-label', 'Delete my data'); }
+    if (delta > 0) this.fps = this.fps ? this.fps * 0.95 + (1 / delta) * 0.05 : 1 / delta;
+    if (sampler) {
+      const needHint = sampler.controllersOnly && sampler.sinceHand > 3;
+      if (needHint && !this.controllerHint) this.say('Put your controllers down', 'Ashiria uses your hands. Set the controllers aside and hold up your hands.');
+      if (!needHint && this.controllerHint) this.say('Hands found', 'Raise your hand into the shadow hands to try a sign.');
+      this.controllerHint = needHint;
+    }
     this.infoTimer -= delta;
     if (this.infoTimer <= 0 && sampler) {
       this.infoTimer = 0.25;
       const f = sampler.lastFrame;
       const hands = `${f.present[0] > 0.5 ? 'signing hand' : '-'} / ${f.present[1] > 0.5 ? 'other hand' : '-'}`;
-      this.set('info', `Hands: ${hands}   Rest: ${app.settings.restHeight.toFixed(2)}${app.pack?.distribution === 'internal' ? '   Development pack' : ''}`);
+      const dev = import.meta.env.DEV ? `   ${Math.round(this.fps)} fps${app.pack?.distribution === 'internal' ? '   Development pack' : ''}` : '';
+      this.set('info', `Hands: ${hands}   Rest: ${app.settings.restHeight.toFixed(2)}${dev}`);
     }
   }
 
