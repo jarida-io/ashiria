@@ -17,18 +17,47 @@ SIGNER = "ksl_dictionary"
 MIN_BYTES = 5_000  # smaller files are truncated downloads
 
 
+def folder_index(root: Path) -> dict[str, str]:
+    """Listing number -> its folder. Folders are named "<number>_<sign>" as the scraper wrote them, but characters some
+    filesystems refuse (such as "?") were saved as "_", so the data sheet's paths don't always match. The number does."""
+    return {d.name.split("_", 1)[0]: d.name for d in root.iterdir() if d.is_dir() and "_" in d.name}
+
+
+def resolve_copy(root: Path, folders: dict[str, str], video_path: str, number) -> str | None:
+    """The saved copy of one data-sheet row, relative to `root`, or None if nothing was saved."""
+    if not video_path:
+        return None
+    rel = Path(*Path(video_path).parts[1:]).as_posix()  # drop "ksl_videos/"
+    if (root / rel).exists():
+        return rel
+    folder = folders.get(str(number))
+    return f"{folder}/{Path(video_path).name}" if folder and (root / folder / Path(video_path).name).exists() else None
+
+
+def is_video(file: Path) -> bool:
+    """A real MP4, not a truncated download or the error page the website sent instead (saved as .mp4)."""
+    if file.stat().st_size < MIN_BYTES:
+        return False
+    with open(file, "rb") as f:
+        return f.read(12)[4:8] == b"ftyp"
+
+
 def import_dictionary(cfg: Config, source_csv: str | Path | None = None) -> pd.DataFrame:
     df = pd.read_csv(training_relative(source_csv or cfg.dictionary["source_csv"]), dtype=str).fillna("")
     df = df[df["video_path"] != ""].copy()
     df["number"] = df["number"].astype(int)
     df = df.sort_values("number")
     root = path(cfg, "raw_videos")
+    folders = folder_index(root)
 
     rows, missing = [], 0
     for _, group in df.groupby("video_src", sort=False):
-        # Every listing saved its own copy; use the first copy that exists and isn't a broken download.
-        copies = [Path(*Path(p).parts[1:]).as_posix() for p in group["video_path"]]  # drop "ksl_videos/"
-        usable = [c for c in copies if (root / c).exists() and (root / c).stat().st_size >= MIN_BYTES]
+        # Every listing saved its own copy; use the first that is a real video. Copies at the data sheet's exact path
+        # come first, so clips found before folder names were matched by number keep their clip ids.
+        exact = [Path(*Path(p).parts[1:]).as_posix() for p in group["video_path"]]
+        found = [resolve_copy(root, folders, p, n) for p, n in zip(group["video_path"], group["number"])]
+        copies = list(dict.fromkeys([c for c in exact if (root / c).exists()] + [c for c in found if c]))
+        usable = [c for c in copies if is_video(root / c)]
         if not usable:
             missing += 1
             continue

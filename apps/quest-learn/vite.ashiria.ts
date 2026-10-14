@@ -27,6 +27,8 @@ const TRAINING = join(ROOT, 'training');
 const ASHIRIA = join(TRAINING, '.venv/bin/ashiria');
 const VIDEO_ROOT = join(TRAINING, 'data');
 const REVIEW = ['approved', 'rejected', 'draft'];
+// The sign browser's index is rebuilt when these change (re-import or re-audit of the dictionary).
+const INDEX_INPUTS = ['dictionary_labels.csv', 'dictionary_audit.csv'].map((f) => join(TRAINING, 'data/dictionary/manifests', f));
 
 function ashiria(args: string[]): Promise<string> {
   return new Promise((ok, fail) => execFile(ASHIRIA, args, { cwd: TRAINING, maxBuffer: 64 * 1024 * 1024 },
@@ -103,6 +105,7 @@ export function ashiriaDev(): Plugin {
       let videos = new Map<string, string>();
       let clips = new Map<string, string>();
       let indexText = '';
+      let indexStamp = '';
       const landmarkCache = new Map<string, string>();
       const referenceCache = new Map<string, string>();
       server.middlewares.use('/dev/study', async (req, res) => {
@@ -111,6 +114,8 @@ export function ashiriaDev(): Plugin {
           if (url === '/' || url === '') return send(res, 200, readFileSync(join(__dirname, 'dev/study.html'), 'utf8'), 'text/html');
           if (url === '/browse' || url === '/browse/') return send(res, 200, readFileSync(join(__dirname, 'dev/browse.html'), 'utf8'), 'text/html');
           if (url === '/index.json') {
+            const stamp = INDEX_INPUTS.map((f) => (existsSync(f) ? statSync(f).mtimeMs : 0)).join();
+            if (stamp !== indexStamp) [indexText, indexStamp] = ['', stamp];
             if (!indexText) {
               indexText = await ashiria(['study-index']);
               const entries = JSON.parse(indexText) as { clip_id: string | null; video: string | null }[];

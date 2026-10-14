@@ -60,6 +60,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--pack", default="ksl-core")
     p = steps.add_parser("study-data", help="JSON for the dev-only study sheet (catalogue, reviews, videos, previews)")
     p.add_argument("--pack", default="ksl-core")
+    p = steps.add_parser("audit-dictionary", help="check every KSL Dictionary video: download, MediaPipe tracking, duplicates")
+    p.add_argument("--workers", type=int, default=8)
     steps.add_parser("study-index", help="JSON index of every sign in the dictionary data sheet (dev-only sign browser)")
     p = steps.add_parser("study-reference", help="JSON reference hands cut from one dictionary clip")
     p.add_argument("clip_id")
@@ -140,6 +142,9 @@ def main(argv: list[str] | None = None) -> None:
         import json as _json
         from .study import clip_landmarks
         print(_json.dumps(clip_landmarks(args.clip_id)))
+    elif args.step == "audit-dictionary":
+        from .dictionary_audit import audit_dictionary
+        audit_dictionary(args.workers)
     elif args.step == "study-reference":
         import json as _json
         from .study import clip_reference

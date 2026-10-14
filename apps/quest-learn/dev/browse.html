@@ -44,6 +44,9 @@
   .empty { color: var(--muted); padding: 40px 0; }
   .missing { aspect-ratio: 4 / 3; border: 1px dashed var(--line); border-radius: 10px; display: grid; place-items: center; text-align: center; padding: 16px; color: var(--muted); }
   .links button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  ul.audit { margin: 8px 0 0; padding-left: 20px; color: var(--warn); overflow: visible; flex: none; }
+  ul.audit li { border: 0; padding: 2px 0; cursor: default; }
+  ul.audit li:hover { background: none; }
   .more { padding: 14px; text-align: center; color: var(--muted); font-size: 13px; }
 
   /* Phone: the list and the sign take turns filling the screen; the back button (and the phone's own Back) returns to the list. */
@@ -76,6 +79,13 @@
         <select id="cat"><option value="">All categories</option></select>
         <label><input type="checkbox" id="v1only" /> Ashiria v1</label>
       </div>
+      <select id="audit">
+        <option value="">All signs</option>
+        <option value="issues">Audit issues (needs a look)</option>
+        <option value="left_leads">Left hand leads</option>
+        <option value="broken">No usable video</option>
+      </select>
+
     </div>
     <ul id="list"></ul>
   </aside>
@@ -89,6 +99,23 @@ const POSE_BONES = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], 
 const COLORS = ['#4fd1e8', '#b49cff'];
 const SW = 0.38;   // reference wrist positions are in shoulder widths
 const PAGE = 250;
+// Audit flags (ashiria audit-dictionary). "Issues" are the ones worth a look before trusting a sign's reference.
+const FLAG_TEXT = {
+  broken: 'No usable video: the KSL Dictionary website returns "not found" for it (checked 14 Oct 2026), and every saved copy is that error page.',
+  few_hands: 'MediaPipe finds the hands in under half the frames.',
+  no_signing: 'The hands stay below mid-torso the whole time. Usually a sign made low; check the video shows a sign.',
+  partial_decode: 'Some frames failed to decode.',
+  no_reference: "Ashiria can't cut a reference from this clip.",
+  long: 'Very long clip (over 10 s).',
+  short: 'Very short clip (under 1 s).',
+  copies_differ: 'The saved copies of this video differ.',
+  duplicate: 'The same file is listed as another video.',
+  near_duplicate: 'Nearly the same motion as another video.',
+  left_leads: 'The left hand leads: a left-handed sign, or a mirrored video.',
+};
+const ISSUES = ['few_hands', 'no_signing', 'partial_decode', 'no_reference', 'long', 'short', 'copies_differ', 'duplicate', 'near_duplicate'];
+const FLAG_CHIP = { few_hands: 'few hands', no_signing: 'hands low', partial_decode: 'decode', no_reference: 'no reference',
+  long: 'long', short: 'short', copies_differ: 'copies differ', duplicate: 'duplicate', near_duplicate: 'near duplicate' };
 let index = [], shown = [], listed = 0, current = null, raf = 0;
 
 const $ = (id) => document.getElementById(id);
@@ -97,7 +124,8 @@ const narrow = () => matchMedia('(max-width: 760px)').matches;
 
 function item(x, i) {
   const chips = (x.variant ? `<span class="chip var">video ${esc(x.variant)}</span>` : '') +
-    (x.v1 ? '<span class="chip v1">v1</span>' : '') + (x.clip_id ? '' : '<span class="chip none">no video</span>');
+    (x.v1 ? '<span class="chip v1">v1</span>' : '') + (x.clip_id ? '' : '<span class="chip none">no video</span>') +
+    x.flags.filter((f) => FLAG_CHIP[f]).map((f) => `<span class="chip none">${FLAG_CHIP[f]}</span>`).join('');
   const also = x.same_video.length ? ' - also: ' + esc(x.same_video.join(', ')) : '';
   return `<li data-i="${i}" class="${current === x ? 'on' : ''}">${esc(x.sign)}${chips}<small>${esc(x.category)}${also}</small></li>`;
 }
@@ -111,15 +139,16 @@ function listMore() {
 }
 
 function filter() {
-  const q = $('q').value.trim().toLowerCase(), cat = $('cat').value, v1 = $('v1only').checked;
-  shown = index.filter((x) => (!cat || x.category === cat) && (!v1 || x.v1) &&
+  const q = $('q').value.trim().toLowerCase(), cat = $('cat').value, v1 = $('v1only').checked, audit = $('audit').value;
+  const auditOk = (x) => !audit || (audit === 'issues' ? x.flags.some((f) => ISSUES.includes(f)) : x.flags.includes(audit));
+  shown = index.filter((x) => (!cat || x.category === cat) && (!v1 || x.v1) && auditOk(x) &&
     (!q || x.sign.toLowerCase().includes(q) || x.same_video.some((n) => n.toLowerCase().includes(q))));
   if (q) shown.sort((a, b) => (b.sign.toLowerCase().startsWith(q) - a.sign.toLowerCase().startsWith(q)));
   $('list').innerHTML = ''; $('list').scrollTop = 0; listed = 0;
   listMore();
   const withVideo = index.filter((x) => x.clip_id).length;
   $('count').textContent = shown.length === index.length
-    ? `${index.length} signs from the data sheet, ${withVideo} with video`
+    ? `${index.length} signs from the data sheet, ${withVideo} with a usable video`
     : `${shown.length} of ${index.length} signs`;
 }
 
@@ -208,12 +237,14 @@ async function open(x, push = true) {
         <div class="cap" id="refcap">Reference hands Ashiria would cut from this clip, facing you like the video.</div></div>
     </div>
     <div class="cap" id="rate"></div>`
-    : '<div class="media"><div class="missing">The scrape has no usable copy of this video (missing, or a broken download).</div></div>';
+    : `<div class="media"><div class="missing">${FLAG_TEXT.broken}</div></div>`;
+  const notes = x.flags.filter((f) => f !== 'broken' && FLAG_TEXT[f]).map((f) => `<li>${FLAG_TEXT[f]}</li>`).join('');
   $('main').innerHTML = `
     <div class="back"><button id="back">&lsaquo; All signs</button></div>
     <h2 class="sign">${esc(x.sign)}${x.variant ? `<span class="chip var">video ${esc(x.variant)}</span>` : ''}${x.v1 ? '<span class="chip v1">in Ashiria v1</span>' : ''}</h2>
     <div class="muted">${esc(x.category)}</div>
     ${sameVideo}
+    ${notes ? `<ul class="audit">${notes}</ul>` : ''}
     ${media}
     ${x.description ? `<p class="desc">${esc(x.description)}</p>` : ''}
     ${x.note ? `<p class="desc muted">Note: ${esc(x.note)}</p>` : ''}`;
@@ -270,6 +301,7 @@ fetch('/dev/study/index.json').then((r) => (r.ok ? r.json() : r.text().then((t) 
 $('q').addEventListener('input', filter);
 $('cat').addEventListener('change', filter);
 $('v1only').addEventListener('change', filter);
+$('audit').addEventListener('change', filter);
 $('list').addEventListener('click', (e) => { const li = e.target.closest('li[data-i]'); if (li) open(shown[+li.dataset.i]); });
 $('list').addEventListener('scroll', () => {
   const l = $('list');

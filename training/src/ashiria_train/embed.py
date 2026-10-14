@@ -42,7 +42,8 @@ def load_references(p: EngineParams) -> tuple[list[str], list[Segment]]:
     Cached in the dictionary cache folder (local, git-ignored) because cutting 2,548 clips takes about a minute."""
     dcfg = load_config(DICTIONARY_CONFIG)
     cache = path(dcfg, "cache") / f"embed_refs_seq{p.seq_len}.npz"
-    if cache.exists():
+    labels_csv = path(dcfg, "manifests") / "dictionary_labels.csv"
+    if cache.exists() and (not labels_csv.exists() or cache.stat().st_mtime > labels_csv.stat().st_mtime):
         with np.load(cache) as d:
             return (d["labels"].tolist(), [Segment(d["hand_rel"][i].astype(np.float64), d["wrist_pos"][i].astype(np.float64),
                                                    d["present"][i].astype(np.float64), float(d["fps"][i])) for i in range(len(d["fps"]))])

@@ -16,6 +16,7 @@ import pandas as pd
 
 from .catalogue import catalogue_file, load_catalogue
 from .config import Config, load_config, path, training_relative
+from .dictionary import folder_index, resolve_copy
 from .store import DICTIONARY, STUDIO, assemble, load_dictionary, load_studio
 
 DICTIONARY_CONFIG = "configs/ksl_dictionary.yaml"
@@ -74,7 +75,7 @@ def dictionary_index() -> list[dict]:
 
     One entry per sign name and video: names that share a video each get their own entry (with `same_video` listing
     the others), and a name with several videos gets one entry per video. `clip_id` is None when the scrape has no
-    usable copy of the video (missing or a broken download).
+    usable copy of the video. `flags` come from the last `ashiria audit-dictionary`.
     """
     dcfg = load_config(DICTIONARY_CONFIG)
     manifest, sheet = path(dcfg, "manifests") / "videos.csv", training_relative(dcfg.dictionary["source_csv"])
@@ -82,9 +83,12 @@ def dictionary_index() -> list[dict]:
         return []
     landmarks, raw = path(dcfg, "landmarks"), path(dcfg, "raw_videos")
     m = pd.read_csv(manifest, dtype=str).fillna("")
-    # `ashiria import-dictionary` keeps one clip per video, numbered by the video's first listing in the sheet.
-    clip_by_number = {r["number"]: r for _, r in m[m["label"] != ""].iterrows()}
+    # `ashiria import-dictionary` keeps one saved copy per video; find it among each video's copies.
+    clip_by_path = {r["path"]: r for _, r in m[m["label"] != ""].iterrows()}
+    folders = folder_index(raw)
     v1 = {c: w for w, c in _v1_clips().items()}
+    from .dictionary_audit import audit_flags
+    flags = audit_flags()
 
     df = pd.read_csv(sheet, dtype=str).fillna("")
     df = df[df["sign"].str.strip() != ""].copy()
@@ -92,7 +96,8 @@ def dictionary_index() -> list[dict]:
     df = df.sort_values("n")
     out = []
     for src, group in df.groupby("video_src", sort=False):
-        clip = clip_by_number.get(str(group["n"].iloc[0])) if src else None
+        copies = (resolve_copy(raw, folders, p, n) for p, n in zip(group["video_path"], group["n"]))
+        clip = next((clip_by_path[c] for c in copies if c in clip_by_path), None) if src else None
         ok = clip is not None and (landmarks / f"{clip['clip_id']}.npz").exists() and (raw / clip["path"]).exists()
         names = list(dict.fromkeys(s.strip() for s in group["sign"]))
         for name in names:
@@ -105,6 +110,7 @@ def dictionary_index() -> list[dict]:
                 "clip_id": clip["clip_id"] if ok else None,
                 "video": str((raw / clip["path"]).resolve()) if ok else None,
                 "v1": v1.get(clip["clip_id"]) if ok else None,
+                "flags": flags.get(clip["clip_id"] if ok else src, [] if ok else ["broken"]),
             })
     # Number the videos of names that have more than one, so the list can tell them apart.
     count: dict[str, int] = {}
