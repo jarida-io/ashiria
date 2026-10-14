@@ -19,3 +19,6 @@ training/models/
 # .NET build output (engine tests outside Unity)
 bin/
 obj/
+
+# Built content packs (may contain licensed or personal reference data)
+content/packs/

@@ -178,15 +178,16 @@ def trim(seg: Segment, rest_height: float, margin: int) -> Segment | None:
     return seg.slice(max(0, idx[0] - margin), min(len(seg), idx[-1] + margin + 1))
 
 
-def active_window(seg: Segment, fraction: float = 0.3, margin: int = 2, min_frames: int = 6) -> Segment:
+def active_window(seg: Segment, fraction: float = 0.3, margin: int = 2, min_frames: int = 6,
+                  min_range: float = 0.3) -> Segment:
     """Cut the rise from rest and the drop back to rest: keep the frames where the dominant wrist is above
-    `fraction` of its own height range. Unchanged if the hand barely changes height (< 0.3 shoulder widths)."""
+    `fraction` of its own height range. Unchanged if the hand barely changes height (< min_range shoulder widths)."""
     dom = seg.present[:, J.RIGHT] > 0.5
     if dom.sum() < 3:
         return seg
     y = seg.wrist_pos[:, J.RIGHT, 1]
     lo, hi = y[dom].min(), y[dom].max()
-    if hi - lo < 0.3:
+    if hi - lo < min_range:
         return seg
     idx = np.flatnonzero(dom & (y >= lo + fraction * (hi - lo)))
     a, b = max(0, idx[0] - margin), min(len(seg), idx[-1] + margin + 1)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from . import joints as J
-from .augment import rotation
+from .augment import bend_fingers, rotation
 from .canonical import Segment
 
 
@@ -23,21 +23,9 @@ def open_hand() -> np.ndarray:
     return pts
 
 
-def _rotate_about(points: np.ndarray, pivot: np.ndarray, axis: np.ndarray, angle: float) -> np.ndarray:
-    k = axis / np.linalg.norm(axis)
-    kx = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
-    r = np.eye(3) + np.sin(angle) * kx + (1 - np.cos(angle)) * kx @ kx
-    return (points - pivot) @ r.T + pivot
-
-
 def bent_hand(bends: np.ndarray) -> np.ndarray:
     """Open hand with each finger bent at its three joints by bends[5, 3] radians (towards the palm)."""
-    h = open_hand()
-    lateral = h[J.PINKY[0]] - h[J.INDEX[0]]
-    for f, chain in enumerate(J.FINGERS):
-        for k in range(3):
-            h[list(chain[k + 1 :])] = _rotate_about(h[list(chain[k + 1 :])], h[chain[k]], lateral, bends[f, k])
-    return h
+    return bend_fingers(open_hand(), np.asarray(bends, float))
 
 
 def random_segment(rng: np.random.Generator, frames: int, two_hands: bool, moving: bool, fps: float = 30.0,
@@ -67,5 +55,37 @@ def random_segment(rng: np.random.Generator, frames: int, two_hands: bool, movin
     if rest_frames:
         wrist[:rest_frames, :, 1] = -2.6
         wrist[-rest_frames:, :, 1] = -2.6
+    hand_rel *= present[:, :, None, None]
+    return Segment(hand_rel, wrist, present, fps)
+
+
+def sign_stream(bends: np.ndarray, orient: np.ndarray | None = None, at=(0.4, -1.0, 0.6), path=None,
+                rest_frames: int = 10, rise: int = 8, hold: int = 24, drop: int = 8, after: int = 10,
+                fps: float = 30.0, rest_y: float = -2.4, other_at=None, lost: tuple[tuple[int, int], ...] = ()) -> Segment:
+    """A live-style stream of one sign: hands at rest, rise to `at`, hold (or move by `path` while holding the
+    handshape), drop back to rest. `other_at` adds the other hand (mirrored shape) doing the same.
+    `lost` = (start, length) spans where the dominant hand is not tracked."""
+    orient = np.eye(3) if orient is None else orient
+    at = np.asarray(at, float)
+    end = at + (np.zeros(3) if path is None else np.asarray(path, float))
+    rest = np.array([at[0], rest_y, at[2]])
+    track = ([rest] * rest_frames + [rest + (at - rest) * (k + 1) / rise for k in range(rise)]
+             + [at + (end - at) * k / max(hold - 1, 1) for k in range(hold)]
+             + [end + (rest - end) * (k + 1) / drop for k in range(drop)] + [rest] * after)
+    n = len(track)
+    hand = bent_hand(np.asarray(bends, float).reshape(5, 3)) @ orient.T
+    hand_rel = np.zeros((n, 2, 21, 3))
+    wrist = np.zeros((n, 2, 3))
+    present = np.zeros((n, 2))
+    hand_rel[:, 0] = hand - hand[0]
+    wrist[:, 0] = track
+    present[:, 0] = 1.0
+    if other_at is not None:
+        offset = np.asarray(other_at, float) - at
+        hand_rel[:, 1] = (hand - hand[0]) * [-1, 1, 1]
+        wrist[:, 1] = np.asarray(track) + offset * (np.asarray(track)[:, 1:2] > rest_y + 1e-9)
+        present[:, 1] = 1.0
+    for start, length in lost:
+        present[start : start + length, 0] = 0.0
     hand_rel *= present[:, :, None, None]
     return Segment(hand_rel, wrist, present, fps)

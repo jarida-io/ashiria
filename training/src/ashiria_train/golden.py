@@ -73,7 +73,7 @@ def build_golden(cfg: Config) -> str:
 
     n = len(cases)
     pairs = [{"a": i, "b": j, "distance": dtw(descriptors[i], descriptors[j])} for i in range(n) for j in range(i + 1, n)]
-    errors = [{"attempt": i, "reference": j, "errors": list(finger_errors(key_flexion[i], key_flexion[j]).values())}
+    errors = [{"attempt": i, "reference": j, "errors": finger_errors(key_flexion[i], key_flexion[j]).tolist()}
               for i in range(n) for j in range(n) if i != j][:12]
     golden = {
         "spec_version": SPEC_VERSION,

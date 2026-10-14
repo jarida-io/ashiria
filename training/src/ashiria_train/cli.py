@@ -34,6 +34,17 @@ def main(argv: list[str] | None = None) -> None:
     steps.add_parser("golden", help="engine test vectors from synthetic hands (spec/golden/) for the C# port")
     p = steps.add_parser("simulate", help="optimistic Free Sign check: perturbed references vs all references")
     p.add_argument("--attempts", type=int, default=8)
+    p = steps.add_parser("calibrate", help="simulated attempts -> per-sign tau, tiers and Free Sign thresholds")
+    p.add_argument("--pack", default="ksl-core")
+    p.add_argument("--attempts", type=int, default=16)
+    p.add_argument("--seed", type=int, default=7)
+    p = steps.add_parser("pack", help="build the content pack the headset loads (content/packs/)")
+    p.add_argument("--pack", default="ksl-core")
+    p.add_argument("--release", action="store_true", help="refuse unless every source has permission and review")
+    p.add_argument("--attempts", type=int, default=16)
+    p = steps.add_parser("catalogue", help="create or extend content/catalogue/<pack>.yaml from a vocabulary file")
+    p.add_argument("--vocab", default="configs/vocabulary_v1.txt")
+    p.add_argument("--pack", default="ksl-core")
 
     # Accept --config after the step name as well (ashiria audit --config x.yaml).
     for sub in steps.choices.values():
@@ -74,6 +85,15 @@ def main(argv: list[str] | None = None) -> None:
     elif args.step == "golden":
         from .golden import build_golden
         build_golden(cfg)
+    elif args.step == "calibrate":
+        from .calibrate import run_calibration
+        run_calibration(cfg, args.pack, args.attempts, args.seed)
+    elif args.step == "pack":
+        from .pack import build_pack
+        build_pack(cfg, args.pack, args.release, args.attempts)
+    elif args.step == "catalogue":
+        from .catalogue import update_catalogue
+        update_catalogue(cfg, args.vocab, args.pack)
     elif args.step == "simulate":
         from .simulate import simulate
         simulate(cfg, attempts=args.attempts)

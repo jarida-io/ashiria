@@ -1,0 +1,1173 @@
+# Ashiria sign catalogue: what the app teaches. Edit freely; `ashiria catalogue` only adds new words.
+#   tier:   auto (computed from tracking checks) | scored | lenient | watch (shown, never scored)
+#   hint:   the team's own words, shown after two misses (never text from the KSL Dictionary)
+#   review: set status to approved (with by/date) once the Deaf co-creators have checked the sign
+#   sources.dictionary: the KSL Dictionary sign used as a draft until Studio takes replace it
+pack_id: ksl-core
+version: 0.1.0
+units:
+- id: spell-your-name
+  title: Spell your name
+  order: 1
+- id: numbers
+  title: Numbers
+  order: 2
+- id: everyday-signs
+  title: Everyday signs
+  order: 3
+- id: around-the-house
+  title: Around the house
+  order: 4
+signs:
+- id: letter-a
+  gloss: A
+  aliases: []
+  unit: spell-your-name
+  order: 1
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: a
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-b
+  gloss: B
+  aliases: []
+  unit: spell-your-name
+  order: 2
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: b
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-c
+  gloss: C
+  aliases: []
+  unit: spell-your-name
+  order: 3
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: c
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-d
+  gloss: D
+  aliases: []
+  unit: spell-your-name
+  order: 4
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: d
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-e
+  gloss: E
+  aliases: []
+  unit: spell-your-name
+  order: 5
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: e
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-f
+  gloss: F
+  aliases: []
+  unit: spell-your-name
+  order: 6
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: f
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-g
+  gloss: G
+  aliases: []
+  unit: spell-your-name
+  order: 7
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: g
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-h
+  gloss: H
+  aliases: []
+  unit: spell-your-name
+  order: 8
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: h
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-k
+  gloss: K
+  aliases: []
+  unit: spell-your-name
+  order: 9
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: k
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-l
+  gloss: L
+  aliases: []
+  unit: spell-your-name
+  order: 10
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: l
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-m
+  gloss: M
+  aliases: []
+  unit: spell-your-name
+  order: 11
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: m
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-n
+  gloss: N
+  aliases: []
+  unit: spell-your-name
+  order: 12
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: n
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-o
+  gloss: O
+  aliases: []
+  unit: spell-your-name
+  order: 13
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: o
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-p
+  gloss: P
+  aliases: []
+  unit: spell-your-name
+  order: 14
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: p
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-q
+  gloss: Q
+  aliases: []
+  unit: spell-your-name
+  order: 15
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: q
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-r
+  gloss: R
+  aliases: []
+  unit: spell-your-name
+  order: 16
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: r
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-s
+  gloss: S
+  aliases: []
+  unit: spell-your-name
+  order: 17
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: s
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-t
+  gloss: T
+  aliases: []
+  unit: spell-your-name
+  order: 18
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: t
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-u
+  gloss: U
+  aliases: []
+  unit: spell-your-name
+  order: 19
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: u
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-v
+  gloss: V
+  aliases: []
+  unit: spell-your-name
+  order: 20
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: v
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-w
+  gloss: W
+  aliases: []
+  unit: spell-your-name
+  order: 21
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: w
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-x
+  gloss: X
+  aliases: []
+  unit: spell-your-name
+  order: 22
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: x
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-y
+  gloss: Y
+  aliases: []
+  unit: spell-your-name
+  order: 23
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: y
+  review:
+    status: draft
+    by: null
+    date: null
+- id: letter-z
+  gloss: Z
+  aliases: []
+  unit: spell-your-name
+  order: 24
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: z
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-zero
+  gloss: zero
+  aliases: []
+  unit: numbers
+  order: 1
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: zero
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-one
+  gloss: one
+  aliases: []
+  unit: numbers
+  order: 2
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: one
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-two
+  gloss: two
+  aliases: []
+  unit: numbers
+  order: 3
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: two
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-three
+  gloss: three
+  aliases: []
+  unit: numbers
+  order: 4
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: three
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-four
+  gloss: four
+  aliases: []
+  unit: numbers
+  order: 5
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: four
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-five
+  gloss: five
+  aliases: []
+  unit: numbers
+  order: 6
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: five
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-six
+  gloss: six
+  aliases: []
+  unit: numbers
+  order: 7
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: six
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-seven
+  gloss: seven
+  aliases: []
+  unit: numbers
+  order: 8
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: seven
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-eight
+  gloss: eight
+  aliases: []
+  unit: numbers
+  order: 9
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: eight
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-nine
+  gloss: nine
+  aliases: []
+  unit: numbers
+  order: 10
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: nine
+  review:
+    status: draft
+    by: null
+    date: null
+- id: number-ten
+  gloss: ten
+  aliases: []
+  unit: numbers
+  order: 11
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: ten
+  review:
+    status: draft
+    by: null
+    date: null
+- id: hello
+  gloss: hello
+  aliases: []
+  unit: everyday-signs
+  order: 1
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: hello
+  review:
+    status: draft
+    by: null
+    date: null
+- id: goodbye
+  gloss: goodbye
+  aliases: []
+  unit: everyday-signs
+  order: 2
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: goodbye
+  review:
+    status: draft
+    by: null
+    date: null
+- id: thank-you
+  gloss: thank you
+  aliases: []
+  unit: everyday-signs
+  order: 3
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: thank you
+  review:
+    status: draft
+    by: null
+    date: null
+- id: good-morning
+  gloss: good morning
+  aliases: []
+  unit: everyday-signs
+  order: 4
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: good morning
+  review:
+    status: draft
+    by: null
+    date: null
+- id: good-night
+  gloss: good night
+  aliases: []
+  unit: everyday-signs
+  order: 5
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: good night
+  review:
+    status: draft
+    by: null
+    date: null
+- id: sorry
+  gloss: sorry
+  aliases: []
+  unit: everyday-signs
+  order: 6
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: sorry
+  review:
+    status: draft
+    by: null
+    date: null
+- id: help
+  gloss: help
+  aliases: []
+  unit: everyday-signs
+  order: 7
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: help
+  review:
+    status: draft
+    by: null
+    date: null
+- id: fine
+  gloss: fine
+  aliases: []
+  unit: everyday-signs
+  order: 8
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: fine
+  review:
+    status: draft
+    by: null
+    date: null
+- id: again
+  gloss: again
+  aliases: []
+  unit: everyday-signs
+  order: 9
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: again
+  review:
+    status: draft
+    by: null
+    date: null
+- id: deaf
+  gloss: deaf
+  aliases: []
+  unit: everyday-signs
+  order: 10
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: deaf
+  review:
+    status: draft
+    by: null
+    date: null
+- id: mother
+  gloss: mother
+  aliases: []
+  unit: everyday-signs
+  order: 11
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: mother
+  review:
+    status: draft
+    by: null
+    date: null
+- id: father
+  gloss: father
+  aliases: []
+  unit: everyday-signs
+  order: 12
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: father
+  review:
+    status: draft
+    by: null
+    date: null
+- id: sister
+  gloss: sister
+  aliases: []
+  unit: everyday-signs
+  order: 13
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: sister
+  review:
+    status: draft
+    by: null
+    date: null
+- id: brother
+  gloss: brother
+  aliases: []
+  unit: everyday-signs
+  order: 14
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: brother
+  review:
+    status: draft
+    by: null
+    date: null
+- id: baby
+  gloss: baby
+  aliases: []
+  unit: everyday-signs
+  order: 15
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: baby
+  review:
+    status: draft
+    by: null
+    date: null
+- id: child
+  gloss: child
+  aliases: []
+  unit: everyday-signs
+  order: 16
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: child
+  review:
+    status: draft
+    by: null
+    date: null
+- id: family
+  gloss: family
+  aliases: []
+  unit: everyday-signs
+  order: 17
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: family
+  review:
+    status: draft
+    by: null
+    date: null
+- id: friend
+  gloss: friend
+  aliases: []
+  unit: everyday-signs
+  order: 18
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: friend
+  review:
+    status: draft
+    by: null
+    date: null
+- id: teacher
+  gloss: teacher
+  aliases: []
+  unit: everyday-signs
+  order: 19
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: teacher
+  review:
+    status: draft
+    by: null
+    date: null
+- id: student
+  gloss: student
+  aliases: []
+  unit: everyday-signs
+  order: 20
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: student
+  review:
+    status: draft
+    by: null
+    date: null
+- id: love
+  gloss: love
+  aliases: []
+  unit: everyday-signs
+  order: 21
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: love
+  review:
+    status: draft
+    by: null
+    date: null
+- id: happy
+  gloss: happy
+  aliases: []
+  unit: everyday-signs
+  order: 22
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: happy
+  review:
+    status: draft
+    by: null
+    date: null
+- id: sad
+  gloss: sad
+  aliases: []
+  unit: everyday-signs
+  order: 23
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: sad
+  review:
+    status: draft
+    by: null
+    date: null
+- id: eat
+  gloss: eat
+  aliases: []
+  unit: everyday-signs
+  order: 24
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: eat
+  review:
+    status: draft
+    by: null
+    date: null
+- id: drink
+  gloss: drink
+  aliases: []
+  unit: everyday-signs
+  order: 25
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: drink
+  review:
+    status: draft
+    by: null
+    date: null
+- id: water
+  gloss: water
+  aliases: []
+  unit: everyday-signs
+  order: 26
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: water
+  review:
+    status: draft
+    by: null
+    date: null
+- id: food
+  gloss: food
+  aliases: []
+  unit: everyday-signs
+  order: 27
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: food
+  review:
+    status: draft
+    by: null
+    date: null
+- id: book
+  gloss: book
+  aliases: []
+  unit: everyday-signs
+  order: 28
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: book
+  review:
+    status: draft
+    by: null
+    date: null
+- id: table
+  gloss: table
+  aliases: []
+  unit: around-the-house
+  order: 1
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: table
+  review:
+    status: draft
+    by: null
+    date: null
+- id: chair
+  gloss: chair
+  aliases: []
+  unit: around-the-house
+  order: 2
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: chair
+  review:
+    status: draft
+    by: null
+    date: null
+- id: door
+  gloss: door
+  aliases: []
+  unit: around-the-house
+  order: 3
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: door
+  review:
+    status: draft
+    by: null
+    date: null
+- id: window
+  gloss: window
+  aliases: []
+  unit: around-the-house
+  order: 4
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: window
+  review:
+    status: draft
+    by: null
+    date: null
+- id: bed
+  gloss: bed
+  aliases: []
+  unit: around-the-house
+  order: 5
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: bed
+  review:
+    status: draft
+    by: null
+    date: null
+- id: television
+  gloss: television
+  aliases: []
+  unit: around-the-house
+  order: 6
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: television
+  review:
+    status: draft
+    by: null
+    date: null
+- id: cup
+  gloss: cup
+  aliases: []
+  unit: around-the-house
+  order: 7
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: cup
+  review:
+    status: draft
+    by: null
+    date: null
+- id: plate
+  gloss: plate
+  aliases: []
+  unit: around-the-house
+  order: 8
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: plate
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phone
+  gloss: phone
+  aliases: []
+  unit: around-the-house
+  order: 9
+  tier: auto
+  tier_note: ''
+  hint: ''
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: phone
+  review:
+    status: draft
+    by: null
+    date: null

@@ -1,0 +1,33 @@
+# Automatic tiers: how strictly the headset checks each sign (training/src/ashiria_train/tiers.py).
+# A co-creator's choice in the catalogue (tier: scored | lenient | watch) always wins over these rules.
+# The first matching group applies: watch, then lenient; anything else is scored. Every reason is recorded.
+
+watch:                          # shown and demonstrated, never scored
+  dominant_tracked_below: 0.7   # the dominant hand is lost too often (occlusion, out of view)
+  hands_close_two_handed: true  # two hands overlapping or touching: tracking merges them
+  facial_grammar: true          # catalogue flag: the face carries meaning the headset cannot see
+  sim_top3_below: 0.5           # Free Sign rarely finds it even among the top three
+  segmentation_miss_above: 0.25  # the attempt segmenter misses it too often
+
+lenient:                        # about 1.4× wider tolerances, look-alike guard kept
+  near_face: true               # hands near the face track less reliably
+  two_handed: true
+  handshape_change: true
+  verify_pass_below: 0.90       # simulated correct attempts that pass the scored check
+  lookalike_false_pass_above: 0.10  # look-alike attempts that would pass the scored check
+  sim_top1_below: 0.80
+  known_hard:                   # fist-family letters, crossed or hidden fingers, palm-towards-body numbers
+    - letter-a
+    - letter-e
+    - letter-h
+    - letter-k
+    - letter-m
+    - letter-n
+    - letter-p
+    - letter-r
+    - letter-s
+    - letter-t
+    - letter-u
+    - letter-v
+    - number-one
+    - number-two

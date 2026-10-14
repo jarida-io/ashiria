@@ -7,6 +7,7 @@ paths:
   runs: runs
   exports: exports
   mediapipe_models: models/mediapipe
+  content: ../content                # catalogue (committed) and built packs (not committed)
 
 video_extensions: [.mp4, .mov, .avi, .mkv, .webm, .m4v, .wmv, .mpg, .mpeg, .3gp]
 
@@ -71,3 +72,18 @@ train:
     edge_crop: 0.1           # trim up to this fraction off each end (segmentation error)
     frame_drop: 0.05
     hand_drop: 0.05          # chance of losing one hand for a stretch of the clip
+
+# `ashiria calibrate`: simulated attempts by "someone else". Milder than training augmentation, because
+# canonicalisation (shoulders on video, head yaw on Quest) already removes most body rotation.
+calibrate:
+  augment:
+    rotate_deg: 6
+    hand_rotate_deg: 8
+    wrist_scale: 0.1
+    wrist_shift: 0.06
+    joint_noise_m: 0.002       # Quest fits a skeleton (fixed bone lengths): jitter shows up as angle noise...
+    finger_noise_rad: 0.10     # ...and each finger bent a little differently
+    speed: [0.75, 1.33]
+    edge_crop: 0.0             # the attempt segmenter does the cutting
+    frame_drop: 0.03
+    hand_drop: 0.03

@@ -17,10 +17,14 @@ from tqdm import tqdm
 
 from . import joints as J
 from .canonical import (Segment, active_window, from_mediapipe, gap_fill, hold_frames, left_dominant_votes, mirror,
-                        resample, steadiest_frame, trim, wrist_extent)
+                        steadiest_frame, trim, wrist_extent)
 from .config import Config, path, training_relative
-from .features import SPEC_VERSION, flexion, spread
-from .matching import lookalikes, segment_descriptor
+from .features import SPEC_VERSION, flexion
+from .matching import distance_matrix, lookalike_table, nearest, segment_descriptor
+from .params import EngineParams
+from .pipeline import cut_reference
+
+DISTRACTORS = 300  # non-vocabulary dictionary signs kept (locally) to calibrate "not sure"
 
 
 def load_vocabulary(file: str | Path) -> list[str]:
@@ -83,6 +87,7 @@ def build_references(cfg: Config, vocab_file: str | Path | None = None) -> Path:
     manifest = pd.read_csv(path(cfg, "manifests") / "videos.csv", dtype=str)
     manifest = manifest[manifest["label"].notna()]
     landmarks, f = path(cfg, "landmarks"), cfg.features
+    p = EngineParams.from_config(cfg)
 
     segments: dict[str, Segment] = {}
     for _, row in tqdm(manifest.iterrows(), total=len(manifest), desc="references"):
@@ -133,7 +138,7 @@ def build_references(cfg: Config, vocab_file: str | Path | None = None) -> Path:
             continue
         clip = hits[0]
         row = by_clip.loc[clip]
-        seg = resample(active_window(segments[clip]), int(f.seq_len))
+        seg = cut_reference(segments[clip], p, f.rest_height)
         key = steadiest_frame(seg)
         descriptors.append(segment_descriptor(seg))
         signs.append({
@@ -150,20 +155,39 @@ def build_references(cfg: Config, vocab_file: str | Path | None = None) -> Path:
             "wrist_pos": np.round(seg.wrist_pos, 4).tolist(),
             "present": seg.present.tolist(),
             "key_frame": key,
-            "target": {"flexion": np.round(flexion(seg.hand_rel[key, J.RIGHT]), 4).tolist(),
-                       "spread": np.round(spread(seg.hand_rel[key, J.RIGHT]), 4).tolist()},
         })
     (out / "references.json").write_text(json.dumps({
         "spec_version": SPEC_VERSION,
         "seq_len": int(f.seq_len),
         "rights": "Derived from KSL Dictionary videos. Not for distribution without the owners' permission.",
+        "source": "ksl_dictionary",
         "signs": signs,
         "missing": missing,
     }))
     print(f"{len(signs)} vocabulary signs -> {out / 'references.json'}; not found: {', '.join(missing) or 'none'}")
+    write_distractors(out / "distractors.npz", [c for c in segments if c not in {s["clip_id"] for s in signs}],
+                      segments, p, f.rest_height)
     if len(signs) > 1:
-        near = pd.DataFrame(lookalikes([s["word"] for s in signs], descriptors))
+        names = [s["word"] for s in signs]
+        dist = distance_matrix(descriptors)
+        np.save(out / "distances.npy", dist)
+        near = pd.DataFrame(lookalike_table(nearest(names, dist)))
         near.to_csv(out / "lookalikes.csv", index=False)
         print("Closest pairs (most likely to be confused):")
         print(near.head(10)[["sign", "near_1", "nearest_distance"]].to_string(index=False))
     return out
+
+
+def write_distractors(file: Path, clips: list[str], segments: dict[str, Segment], p: EngineParams,
+                      rest_height: float) -> None:
+    """Prepared non-vocabulary signs (an even spread of up to DISTRACTORS clips): attempts at signs the
+    app does not teach, so calibration can check that Free Sign says "not sure" to them. Local only."""
+    if not clips:
+        return
+    chosen = clips[:: max(1, len(clips) // DISTRACTORS)][:DISTRACTORS]
+    prepared = [cut_reference(segments[c], p, rest_height) for c in chosen]
+    np.savez_compressed(file, hand_rel=np.stack([s.hand_rel for s in prepared]).astype(np.float32),
+                        wrist_pos=np.stack([s.wrist_pos for s in prepared]).astype(np.float32),
+                        present=np.stack([s.present for s in prepared]).astype(np.float32),
+                        fps=np.array([s.fps for s in prepared]), clip_id=np.array(chosen))
+    print(f"{len(prepared)} distractor signs -> {file}")
