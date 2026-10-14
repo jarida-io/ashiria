@@ -6,11 +6,14 @@
  *   hold KSL Dictionary drafts. They are served to this Mac and the headset on the same Wi-Fi, never built
  *   into the app.
  * - POST /dev/studio: saves a Studio take (spec/STUDIO_FORMAT.md) to ../../training/data/studio/<session>/.
+ * - /dev/study: the study sheet (dev/study.html): each sign's local dictionary video next to its reference hands,
+ *   with Approve / Reject buttons that run `ashiria approve`. The videos never leave this Mac.
  *
  * Production builds only bundle packs from public/packs/, and refuse any that is not a release pack
  * (`ashiria pack --release`: Studio-recorded, approved signs only).
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { execFile } from 'node:child_process';
+import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { join, resolve } from 'node:path';
 import type { Plugin } from 'vite';
@@ -18,6 +21,34 @@ import type { Plugin } from 'vite';
 const ROOT = resolve(__dirname, '../..');
 const PACKS = join(ROOT, 'content/packs');
 const STUDIO = join(ROOT, 'training/data/studio');
+const TRAINING = join(ROOT, 'training');
+const ASHIRIA = join(TRAINING, '.venv/bin/ashiria');
+const VIDEO_ROOT = join(TRAINING, 'data');
+const REVIEW = ['approved', 'rejected', 'draft'];
+
+function ashiria(args: string[]): Promise<string> {
+  return new Promise((ok, fail) => execFile(ASHIRIA, args, { cwd: TRAINING, maxBuffer: 64 * 1024 * 1024 },
+    (err, stdout, stderr) => (err ? fail(new Error(stderr || String(err))) : ok(stdout))));
+}
+
+/** Stream a local video with HTTP range support (browsers need it to play <video>). */
+function sendVideo(req: IncomingMessage, res: ServerResponse, file: string): void {
+  const size = statSync(file).size;
+  const range = /bytes=(\d*)-(\d*)/.exec(req.headers.range ?? '');
+  res.setHeader('Content-Type', 'video/mp4');
+  res.setHeader('Accept-Ranges', 'bytes');
+  if (range) {
+    const start = range[1] ? Number(range[1]) : 0;
+    const end = range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+    res.statusCode = 206;
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+    res.setHeader('Content-Length', end - start + 1);
+    createReadStream(file, { start, end }).pipe(res);
+  } else {
+    res.setHeader('Content-Length', size);
+    createReadStream(file).pipe(res);
+  }
+}
 const SAFE = /^[a-z0-9][a-z0-9._-]*$/i;
 const MAX_TAKE_BYTES = 20 * 1024 * 1024;
 
@@ -65,6 +96,34 @@ export function ashiriaDev(): Plugin {
         const file = join(PACKS, parts[0], parts[1]);
         if (!existsSync(file)) return send(res, 404, { error: 'not found' });
         return send(res, 200, readFileSync(file, 'utf8'));
+      });
+
+      let videos = new Map<string, string>();
+      server.middlewares.use('/dev/study', async (req, res) => {
+        const url = (req.url ?? '/').split('?')[0];
+        try {
+          if (url === '/' || url === '') return send(res, 200, readFileSync(join(__dirname, 'dev/study.html'), 'utf8'), 'text/html');
+          if (url === '/data.json') {
+            const text = await ashiria(['study-data']);
+            const data = JSON.parse(text) as { signs: { id: string; video: string | null }[] };
+            videos = new Map(data.signs.filter((s) => s.video).map((s) => [s.id, s.video as string]));
+            return send(res, 200, text);
+          }
+          const video = /^\/video\/([a-z0-9-]+)$/.exec(url);
+          if (video) {
+            const file = videos.get(video[1]);
+            if (!file || !resolve(file).startsWith(VIDEO_ROOT + '/') || !existsSync(file)) return send(res, 404, { error: 'no video' });
+            return sendVideo(req, res, file);
+          }
+          if (url === '/review' && req.method === 'POST') {
+            const { id, status } = JSON.parse(await readBody(req)) as { id?: string; status?: string };
+            if (!id || !SAFE.test(id) || !status || !REVIEW.includes(status)) return send(res, 400, { error: 'bad review' });
+            return send(res, 200, { result: (await ashiria(['approve', id, '--status', status])).trim() });
+          }
+          return send(res, 404, { error: 'not found' });
+        } catch (err) {
+          return send(res, 500, { error: String(err) });
+        }
       });
 
       server.middlewares.use('/dev/studio', async (req, res) => {

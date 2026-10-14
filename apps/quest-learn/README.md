@@ -33,6 +33,16 @@ npm run dev
   `make -C ../../training pack`. Development packs may contain KSL Dictionary drafts: they are served to this Mac
   and your headset only, and never bundled.
 
+## Study sheet (approve and learn signs)
+
+With `npm run dev` running, open `https://localhost:8081/dev/study/` on the Mac. For each sign:
+- the local KSL Dictionary video plays next to our reference hands;
+- **Approve**, **Reject** and **Back to draft** record your review in `content/catalogue/ksl-core.yaml`
+  (`ashiria approve`);
+- the release pack ships only approved signs.
+
+This is development only: the videos never leave this Mac and are never built into the app.
+
 ## Studio (recording reference signs)
 
 Open the app with `?studio` on a development build (`https://<mac>:8081/?studio`). Pick a sign with Prev/Next,

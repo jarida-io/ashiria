@@ -58,6 +58,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--status", default="approved", choices=["approved", "rejected", "draft"])
     p.add_argument("--by", default="Jerry")
     p.add_argument("--pack", default="ksl-core")
+    p = steps.add_parser("study-data", help="JSON for the dev-only study sheet (catalogue, reviews, videos, previews)")
+    p.add_argument("--pack", default="ksl-core")
     p = steps.add_parser("catalogue", help="create or extend content/catalogue/<pack>.yaml from a vocabulary file")
     p.add_argument("--vocab", default="configs/vocabulary_v1.txt")
     p.add_argument("--pack", default="ksl-core")
@@ -118,6 +120,10 @@ def main(argv: list[str] | None = None) -> None:
         from .catalogue import set_review
         changed = set_review(cfg, args.pack, args.ids, args.status, args.by)
         print(f"{args.status}: {', '.join(changed)}")
+    elif args.step == "study-data":
+        import json as _json
+        from .study import study_data
+        print(_json.dumps(study_data(cfg, args.pack)))
     elif args.step == "catalogue":
         from .catalogue import update_catalogue
         update_catalogue(cfg, args.vocab, args.pack)

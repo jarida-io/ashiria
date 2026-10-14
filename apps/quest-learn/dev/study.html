@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ashiria study sheet</title>
+<style>
+  :root { --bg: #f6f7f8; --card: #fff; --ink: #1d1d1f; --muted: #6b6f76; --line: #e3e5e8; --ok: #1f8a4c; --no: #b42318; --draft: #8a6d1f; --accent: #0b6e8a; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111315; --card: #1b1e21; --ink: #eef0f2; --muted: #9aa0a6; --line: #2b2f33; --accent: #4fd1e8; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 -apple-system, system-ui, sans-serif; }
+  header { position: sticky; top: 0; background: var(--bg); padding: 14px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 16px; align-items: center; flex-wrap: wrap; z-index: 1; }
+  h1 { font-size: 17px; margin: 0; }
+  .muted { color: var(--muted); }
+  main { padding: 16px 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .gloss { font-size: 22px; font-weight: 700; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid currentColor; }
+  .approved { color: var(--ok); } .rejected { color: var(--no); } .draft { color: var(--draft); }
+  .media { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  video, canvas { width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: 8px; display: block; }
+  canvas { background: #0d1b22; }
+  .cap { font-size: 11px; color: var(--muted); text-align: center; margin-top: 2px; }
+  .actions { display: flex; gap: 6px; }
+  button { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+  button.approve { border-color: var(--ok); color: var(--ok); }
+  button.reject { border-color: var(--no); color: var(--no); }
+  button:disabled { opacity: .5; cursor: default; }
+  .empty { aspect-ratio: 4 / 3; border: 1px dashed var(--line); border-radius: 8px; display: grid; place-items: center; color: var(--muted); font-size: 12px; text-align: center; padding: 8px; }
+  label { display: flex; gap: 6px; align-items: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Study sheet</h1>
+  <span class="muted" id="summary">Loading...</span>
+  <label><input type="checkbox" id="drafts-only" /> Drafts only</label>
+  <span class="muted">Development only: the dictionary videos never leave this Mac. Preview is shown facing you, like the video.</span>
+</header>
+<main id="grid"></main>
+<script>
+const FINGERS = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]];
+const BONES = FINGERS.flatMap((c) => [[0, c[0]], [c[0], c[1]], [c[1], c[2]], [c[2], c[3]]]).concat([[5, 9], [9, 13], [13, 17]]);
+const SW = 0.38;
+let data = null;
+const players = [];
+
+/** Joint j of a slot at frame t, in metres: x is mirrored so the view faces you, like the video. */
+function joint(take, t, slot, j) {
+  const wo = (t * 2 + slot) * 3, o = ((t * 2 + slot) * 21 + j) * 3;
+  return [-(take.wrist_pos[wo] * SW + take.hand_rel[o]), take.wrist_pos[wo + 1] * SW + take.hand_rel[o + 1]];
+}
+
+/** Fit the whole take (all frames, shown hands) into the canvas so handshapes are big enough to judge. */
+function fit(take, twoHanded, w, h) {
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (let t = 0; t < take.frames; t++)
+    for (let slot = 0; slot < (twoHanded ? 2 : 1); slot++) {
+      if (take.present[t * 2 + slot] < 0.5) continue;
+      for (let j = 0; j < 21; j++) {
+        const [x, y] = joint(take, t, slot, j);
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+    }
+  const scale = 0.85 * Math.min(w / Math.max(x1 - x0, 0.05), h / Math.max(y1 - y0, 0.05));
+  return { scale, mx: (x0 + x1) / 2, my: (y0 + y1) / 2 };
+}
+
+function draw(ctx, take, t, twoHanded) {
+  const { width: w, height: h } = ctx.canvas;
+  ctx.clearRect(0, 0, w, h);
+  take.view ??= fit(take, twoHanded, w, h);
+  const { scale, mx, my } = take.view;
+  for (let slot = 0; slot < (twoHanded ? 2 : 1); slot++) {
+    if (take.present[t * 2 + slot] < 0.5) continue;
+    const pt = (j) => {
+      const [x, y] = joint(take, t, slot, j);
+      return [w / 2 + (x - mx) * scale, h / 2 - (y - my) * scale];
+    };
+    ctx.strokeStyle = slot === 0 ? '#4fd1e8' : '#b49cff';
+    ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    for (const [a, b] of BONES) { const p = pt(a), q = pt(b); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); }
+    ctx.fillStyle = ctx.strokeStyle;
+    for (let j = 0; j < 21; j++) { const p = pt(j); ctx.beginPath(); ctx.arc(p[0], p[1], j % 4 === 0 && j ? 3.2 : 2.2, 0, 7); ctx.fill(); }
+  }
+}
+
+function card(s) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.dataset.id = s.id;
+  const video = s.video ? `<div><video src="/dev/study/video/${s.id}" muted loop autoplay playsinline></video><div class="cap">Dictionary video</div></div>`
+                        : '<div class="empty">No dictionary video. Record it yourself (team video or Studio).</div>';
+  const preview = s.take ? '<div><canvas width="320" height="240"></canvas><div class="cap">Our reference hands</div></div>'
+                         : '<div class="empty">No reference yet</div>';
+  el.innerHTML = `
+    <div class="top"><span class="gloss">${s.gloss}</span><span class="badge ${s.review}">${s.review}</span></div>
+    <div class="muted">${s.unit} - tier: ${s.tier}${s.tier_note ? ' (' + s.tier_note + ')' : ''}${s.source ? ' - source: ' + s.source : ''}</div>
+    <div class="media">${video}${preview}</div>
+    <div class="actions">
+      <button class="approve" data-status="approved">Approve</button>
+      <button class="reject" data-status="rejected">Reject</button>
+      <button data-status="draft">Back to draft</button>
+    </div>`;
+  el.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => review(s, b.dataset.status, el)));
+  const canvas = el.querySelector('canvas');
+  if (canvas && s.take) players.push({ ctx: canvas.getContext('2d'), take: s.take, two: s.two_handed });
+  return el;
+}
+
+async function review(s, status, el) {
+  el.querySelectorAll('button').forEach((b) => (b.disabled = true));
+  const res = await fetch('/dev/study/review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id, status }) });
+  el.querySelectorAll('button').forEach((b) => (b.disabled = false));
+  if (!res.ok) { alert(await res.text()); return; }
+  s.review = status;
+  const badge = el.querySelector('.badge');
+  badge.className = `badge ${status}`; badge.textContent = status;
+  summarise();
+}
+
+function summarise() {
+  const n = data.signs.length, c = (st) => data.signs.filter((s) => s.review === st).length;
+  document.getElementById('summary').textContent = `${data.pack_id} ${data.version}: ${n} signs - ${c('approved')} approved, ${c('rejected')} rejected, ${c('draft')} draft`;
+  const draftsOnly = document.getElementById('drafts-only').checked;
+  document.querySelectorAll('.card').forEach((el) => {
+    const s = data.signs.find((x) => x.id === el.dataset.id);
+    el.style.display = draftsOnly && s.review !== 'draft' ? 'none' : '';
+  });
+}
+
+function animate(time) {
+  for (const p of players) {
+    const period = (p.take.frames - 1) / p.take.fps + 0.8;
+    const t = Math.min(p.take.frames - 1, Math.floor(((time / 1000) % period) * p.take.fps));
+    draw(p.ctx, p.take, t, p.two);
+  }
+  requestAnimationFrame(animate);
+}
+
+fetch('/dev/study/data.json').then((r) => r.ok ? r.json() : r.text().then((t) => Promise.reject(t))).then((d) => {
+  data = d;
+  const grid = document.getElementById('grid');
+  d.signs.forEach((s) => grid.appendChild(card(s)));
+  document.getElementById('drafts-only').addEventListener('change', summarise);
+  summarise();
+  requestAnimationFrame(animate);
+}, (err) => { document.getElementById('summary').textContent = 'Could not load: ' + err; });
+</script>
+</body>
+</html>
