@@ -1,6 +1,12 @@
 # Ashiria training pipeline
 
-Turns sign videos into a small model that recognises signs offline on Quest.
+Two jobs:
+1. **Content for the headset.** Reference signs (from the KSL Dictionary drafts or Studio recordings) → a
+   calibrated content pack. This is what the competition build uses.
+2. **A sign model** (later). Sign videos → a small offline model for Quest.
+
+It is also the **reference implementation of the engine**. The C# port in `sdk/unity/` must reproduce it on
+the golden vectors (`ashiria golden`).
 
 ```
 videos ─audit─▶ manifest ─extract─▶ MediaPipe hand + body landmarks ─build─▶ canonical segments
@@ -52,15 +58,37 @@ That makes it a **reference library, not a training set**. A classifier can't le
 make dictionary      # import labels → audit → extract landmarks → references for configs/vocabulary_v1.txt
 ```
 
-Then `ashiria check` (are the hand slots and coordinate axes consistent?) and `ashiria simulate` (an optimistic Free Sign test: how often a perturbed reference is matched back to itself among the vocabulary).
+Then run `ashiria check` (are the hand slots and coordinate axes consistent?).
 
 This writes these files to `exports/dictionary/references/`:
-- **`references.csv`:** tags for every sign (one or two hands, static or moving, near the face, hands close together, tracking quality), to help the co-creators pick a vocabulary the headset can check.
-- **`references.json`:** for each vocabulary sign, the shadow-hand animation, the target finger angles, and the dictionary's description.
-- **`lookalikes.csv`:** each vocabulary sign's nearest neighbours by matching distance, i.e. the likely confusions.
-- **`simulated_recognition.csv`:** per-sign top-1 and top-3 from `ashiria simulate`.
+- **`references.csv`:** tags for every sign: one or two hands, static or moving, near the face, hands close
+  together, tracking quality. They help the co-creators pick a vocabulary the headset can check.
+- **`references.json`:** for each vocabulary sign, the reference take (cut exactly like a live attempt) and its key
+  frame, plus the dictionary's description (local only, never packed).
+- **`lookalikes.csv`, `distances.npy`:** each vocabulary sign's nearest neighbours, i.e. the likely confusions.
+- **`distractors.npz`:** 300 non-vocabulary signs, so calibration can check that Free Sign says "not sure" to them.
 
 **Rights:** the videos are the KSL Dictionary's copyright and carry no licence. Keep this to local development until the owners agree in writing. Nothing derived from these videos ships without that permission.
+
+## Content for the headset
+
+```
+catalogue (content/catalogue/ksl-core.yaml, committed)  +  references (dictionary drafts or Studio takes)
+   ─calibrate─▶ tau per sign, Free Sign thresholds, tiers   ─pack─▶ content/packs/ksl-core-<version>/
+```
+
+| Command | What it does |
+|---|---|
+| `make catalogue` | Creates or extends `content/catalogue/ksl-core.yaml` from `configs/vocabulary_v1.txt`. Re-running only adds new words; the co-creators' edits (tiers, hints, approvals) are kept |
+| `make calibrate` | Simulated attempts through the real segmenter → tau, Free Sign thresholds, tiers (`configs/tiers.yaml`). Writes `exports/calibration/ksl-core.json` and `tiers_ksl-core.csv` for the co-creators' review |
+| `make pack` | Runs calibration, then writes the pack (`spec/CONTENT_PACK.md`). Add `--release` (`.venv/bin/ashiria pack --release`) for a distributable pack. It refuses without dictionary permission in `content/rights.yaml` and co-creator approval of every sign |
+| `make studio-import STUDIO=data/studio/<session>` | Studio takes pulled from the headset → `exports/studio/store.json`. Studio takes then replace those signs' dictionary drafts in the next pack |
+| `.venv/bin/ashiria studio-fake` | Fake Studio takes from the dictionary references, to test the import before the headset arrives |
+| `make golden` | Regenerates `spec/golden/` (engine and runtime vectors, mini pack, Studio take) for the C# tests |
+
+Calibration is simulated (one signer, synthetic variation), so its numbers are optimistic. Studio already saves
+the team's test attempts (`role: test`, in `exports/studio/attempts.json`). Calibrating from them instead is the
+next step, and isn't built yet.
 
 ## Where the videos go
 

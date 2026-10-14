@@ -26,21 +26,35 @@ The hackathon entry. This folder will hold the Unity project; create it here fol
    - package name `io.jarida.ashiria.learn`.
 6. **OVR Manager:** Hand Tracking Support **Hands Only**. Leave the hand-tracking version on Default.
 7. **Building Blocks** (Meta → Building Blocks): Camera Rig, Passthrough, Hand Tracking, Interaction Rig, then the Interaction SDK UI Set.
-8. **Check the engine:** run the engine tests (Window → General → Test Runner → EditMode). They read `spec/golden/engine_v1.json` and must all pass before any app code relies on the engine.
+8. **Check the engine:** run the engine tests (Window → General → Test Runner → EditMode). They read `spec/golden/` and must all pass (16 tests) before any app code relies on the engine. They already pass under .NET, so a failure here means a Unity-specific difference.
 
 ## 3. Folder plan inside the project
 
 ```
 Assets/Ashiria/
-  Scripts/Input/      OVRSkeleton or Interaction SDK → QuestCanonical frames → ring buffer
-  Scripts/Lessons/    content pack loading, lesson flow, spaced repetition, progress (local JSON)
-  Scripts/Practice/   Verify (per-finger feedback) and Free Sign (Recognise)
-  Scripts/Studio/     record → trim → replay → label → save   (#if ASHIRIA_STUDIO)
+  Scripts/Input/      HandFrameSource: OVRSkeleton bones (Transform.position, world space) or ISDK IHand.GetJointPose
+                      → HandInput; centre-eye pose → TickClock → QuestCanonical.Frame
+  Scripts/Lessons/    ContentPackLoader (StreamingAssets, or a sideloaded pack in persistentDataPath on development
+                      builds), lesson flow, spaced repetition, progress (local JSON)
+  Scripts/Practice/   AttemptSegmenter → Pipeline.Prepare → Verifier (target sign) or Recogniser (Free Sign) → HintText
+  Scripts/Onboarding/ handedness, rest height (Onboarding.RestHeight from 2 s of resting hands), strictness
+  Scripts/Studio/     record → trim → replay → label → StudioTakeWriter   (#if ASHIRIA_STUDIO)
   Scripts/MR/         sign wall, Room Words (MR Utility Kit)
-  Content/            content packs: references.json (derived hand data only), catalogue, short videos of Entrant co-creators
-                      (never dictionary video frames: that signer isn't an Entrant)
+  StreamingAssets/Content/ksl-core-<version>/   manifest.json, catalogue.json, references.json (`ashiria pack`)
+  Content/            short videos of Entrant co-creators only (never dictionary video frames: that signer isn't an Entrant)
   Scenes/             Learn.unity, Studio.unity
 ```
+
+**Where the engine does the work:** the app layer only converts SDK types (Vector3, Quaternion, bone lists) to the
+engine's `Vec3`, `HandInput` and `HandSample`. All decisions live in the engine, which is tested. The example loop
+is in the [engine README](../../sdk/unity/com.jarida.ashiria.engine/README.md#use-from-unity).
+
+**Content packs:**
+- **Build one:** `make -C training pack`, then copy the folder into `StreamingAssets/Content/`.
+- **Development builds:** may also load a pack sideloaded to `persistentDataPath/packs/`, so a retuned pack can be
+  tested without a rebuild (there is no Link on a Mac).
+- **Competition build:** only a pack built with `--release`, or one made entirely from Studio takes recorded by
+  Entrants.
 
 ## 4. Rules for every build
 

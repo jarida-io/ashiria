@@ -4,11 +4,20 @@ Learn, practise and recognise Kenyan Sign Language, built with Deaf KSL signers.
 
 | Folder | What's in it | Status |
 |---|---|---|
-| `docs/` | Platform overview, hackathon plan | Living documents |
-| `spec/` | Shared contracts: [feature spec](spec/FEATURE_SPEC.md), joint layout, golden test vectors (`spec/golden/`) | v1 |
-| `training/` | Python pipeline: videos → landmarks → references and models → ONNX ([README](training/README.md)) | Working, tested |
-| `sdk/unity/` | C# engine package (canonicalisation, features, matching) ([README](sdk/unity/com.jarida.ashiria.engine/README.md)) | Written; compiles once Unity is installed |
+| `docs/` | Platform overview, hackathon plan, [outreach drafts](docs/outreach/README.md), [privacy policy draft](docs/privacy.md) | Living documents |
+| `spec/` | Shared contracts: [features](spec/FEATURE_SPEC.md), [runtime](spec/RUNTIME_SPEC.md), [content packs](spec/CONTENT_PACK.md), [Studio takes](spec/STUDIO_FORMAT.md), golden test vectors (`spec/golden/`) | v1 |
+| `training/` | Python: videos → landmarks → references; the engine's reference implementation; calibration, catalogue → content packs; Studio import ([README](training/README.md)) | Working, 45 tests |
+| `sdk/unity/` | C# engine package: frames, segmenter, Verify, Recognise, pack loader, Studio writer ([README](sdk/unity/com.jarida.ashiria.engine/README.md)) | Compiles; 16 parity tests pass under .NET |
+| `content/` | `catalogue/ksl-core.yaml` (what the app teaches, edited by the co-creators), `rights.yaml`; built packs in `content/packs/` (git-ignored) | v0.1.0 internal |
 | `apps/quest-learn/` | Ashiria Learn and Studio for Quest ([setup](apps/quest-learn/README.md)) | Create the Unity project here |
-| `content/`, `services/`, `sdk/android/`, `apps/android/` | Catalogue packs, PocketBase service, Android engine and apps | Later (PLATFORM.md §6) |
+| `services/`, `sdk/android/`, `apps/android/` | PocketBase service, Android engine and apps | Later (PLATFORM.md §6) |
 
-**Data rule:** sign videos show real people. They and anything derived from them stay out of git and out of any cloud service unless the signers have agreed to it. `training/data/`, `training/runs/` and `training/exports/` are git-ignored.
+**Check everything:**
+```bash
+make -C training test
+```
+```bash
+dotnet test sdk/unity/com.jarida.ashiria.engine/Tests~/dotnet
+```
+
+**Data rule:** sign videos show real people. They and anything derived from them stay out of git and out of any cloud service unless the signers have agreed to it. `training/data/`, `training/runs/`, `training/exports/` and `content/packs/` are git-ignored. Synthetic test data (`spec/golden/`) contains no real people.

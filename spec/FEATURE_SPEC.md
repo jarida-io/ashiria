@@ -51,10 +51,11 @@ A **segment** is a run of frames with, for each frame and hand slot:
 
 ### 4.2 Headset (C#)
 
-1. **Head frame each frame.** Origin = centre-eye position. y = world up. z = head forward with its vertical part removed, normalised. x = cross(y, z) in Unity.
+1. **Head frame each frame.** y = world up. z = head forward with its vertical part removed, normalised. x = cross(y, z) in Unity. When looking almost straight up or down, keep the previous frame's axes.
+   - **Origin** = centre-eye position + `NoseOffset` (0, −0.045, 0.025) m in those axes: roughly the nose tip, where the video frame's origin is. Without it, headset wrists sit about 0.12 shoulder widths higher than in the references, and the wrist carries the largest matching weight.
 2. **Scale.** The user's shoulder width, default 0.38 m. It can be calibrated by asking the user to hold both hands out at shoulder width.
 3. **Hand shape.** `hand_rel` = for the 21 mapped joints, (joint − wrist) expressed in (x, y, z).
-4. **Hand location.** `wrist_pos` = (wrist − centre eye) in (x, y, z), divided by the scale.
+4. **Hand location.** `wrist_pos` = (wrist − origin) in (x, y, z), divided by the scale.
 5. **Presence.** `present` = 1 only when all of these hold:
    - the hand is tracked;
    - its data is valid and high confidence;
@@ -63,7 +64,7 @@ A **segment** is a run of frames with, for each frame and hand slot:
 6. **Slots.** Slot 0 = right hand, 1 = left, then §5.1.
 
 **Known approximations.** Augmentation during training is sized to cover these:
-- the nose versus the centre eye;
+- the nose offset is an average adult's, not the user's;
 - shoulders versus head yaw;
 - MediaPipe versus Quest joint placement. In particular, OpenXR's WRIST (1) is the wrist pivot, while MediaPipe's wrist (0) sits at the base of the palm. This shifts wrist-relative coordinates and palm length slightly. If Quest recordings show a systematic offset, spec v2 should build the hand frame from the knuckles (index, middle and pinky MCP) instead of the wrist.
 
@@ -92,11 +93,11 @@ For each slot, a run of at most 5 untracked frames between two tracked frames is
 
 ### 5.3 Trim
 
-1. A frame is **active** if some present hand has `wrist_pos.y` ≥ −1.8.
+1. A frame is **active** if some present hand has `wrist_pos.y` ≥ the rest height: −1.8 for the standing signers on video, the user's own onboarding value on the headset (`RUNTIME_SPEC.md` §2).
 2. Keep from the first to the last active frame, plus 2 frames of margin on each side.
 3. If no frame is active, fall back to the frames where a hand is present.
 
-On the headset the same rule runs over a buffered attempt window, starting after the prompt and ending when the hands drop or hold still.
+On the headset the attempt segmenter cuts the live stream first (`RUNTIME_SPEC.md` §3). References are cut through the same segmenter when packs are built, so both go through identical steps.
 
 ### 5.4 Resample to 32 frames
 
