@@ -53,7 +53,8 @@ export class ShadowHandsSystem extends createSystem({}) {
 
   private take(): Take | null {
     const info = app.current;
-    if (!info || app.mode === 'free') return null;
+    // Hidden in Free Sign, and in the recall phase (sign from memory). Studio always shows it.
+    if (!info || app.mode === 'free' || (app.mode === 'practice' && app.phase === 'recall')) return null;
     const sign = app.pack?.signs.get(info.id);
     return sign ? sign.takes[sign.shadowTake] ?? sign.takes[0] : null;
   }
@@ -88,7 +89,8 @@ export class ShadowHandsSystem extends createSystem({}) {
     }
     const origin = [0, 1, 2].map((c) => head[c] + x[c] * NOSE_OFFSET[0] + y[c] * NOSE_OFFSET[1] + z[c] * NOSE_OFFSET[2]);
     const seg = take.segment;
-    const twoHanded = app.current?.tags.hands === 'two';
+    // KSL letters are one-handed; the dictionary's "two hands" tag there only means the other hand moved.
+    const twoHanded = app.current?.tags.hands === 'two' && app.current?.unit !== 'spell-your-name';
     for (let slot = 0; slot < 2; slot++) {
       // One-handed signs: the other hand is just resting, so don't draw it.
       this.present[slot] = seg.present[t * 2 + slot] > 0.5 && (slot === DOMINANT || twoHanded);

@@ -57,6 +57,30 @@
     color: #7a7a7a;
   }
 
+  .eyebrow:dark {
+    color: #b5bac1;
+  }
+
+  .gloss:dark {
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .mode:dark {
+    color: #7fd3e6;
+  }
+
+  .status:dark {
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .hint:dark {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .info:dark {
+    color: #9aa0a6;
+  }
+
   .row {
     flex-direction: row;
     gap: 8px;
@@ -76,6 +100,7 @@
   <div class="panel-content">
     <div id="unit" class="eyebrow">Loading signs</div>
     <div id="gloss" class="gloss">Ashiria</div>
+    <div id="mastery" class="eyebrow">New (0 of 4)</div>
     <div id="mode" class="mode">Practise Kenyan Sign Language</div>
     <Divider></Divider>
     <div id="status" class="status">Getting ready</div>
@@ -93,6 +118,7 @@
     <Button id="btn-strict"><ButtonLabel id="strict-label">Normal</ButtonLabel></Button>
   </div>
   <div class="row">
+    <Button id="btn-preview"><ButtonLabel id="preview-label">Preview</ButtonLabel></Button>
     <Button id="btn-delete"><ButtonLabel id="delete-label">Delete my data</ButtonLabel></Button>
   </div>
   <Button id="xr-button" class="button"><ButtonLabel>Start (hands only)</ButtonLabel></Button>

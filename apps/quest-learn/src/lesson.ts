@@ -5,6 +5,7 @@
 import { hintText, lookalikesOf, prepare, recognise, restHeight, verify, type Attempt } from '@ashiria/engine';
 import { createSystem, FollowBehavior, Follower, RayInteractable, VisibilityState, type UIKitMLAsset } from '@iwsdk/core';
 import { app, STUDIO_ENABLED } from './app-state.js';
+import { currentStreak, masteryText, unitSummary } from './flow.js';
 import { HandSamplerSystem } from './hand-sampler.js';
 import { ShadowHandsSystem } from './shadow-hands.js';
 import { saveTake } from './studio.js';
@@ -19,7 +20,6 @@ export class LessonSystem extends createSystem({}) {
   private el: Record<string, Element | null> = {};
   private lastClick = -Infinity;
   private now = 0;
-  private misses = 0;
   private infoTimer = 0;
   private calibrating: { start: number; samples: number[] } | null = null;
   private deleteArmedUntil = 0;
@@ -34,12 +34,13 @@ export class LessonSystem extends createSystem({}) {
     panelEntity?.addComponent(Follower, {
       target: this.player.head, offsetPosition: [-0.3, -0.28, -0.48], behavior: FollowBehavior.PivotY,
     });
-    for (const id of ['unit', 'gloss', 'mode', 'status', 'hint', 'info', 'mode-label', 'hand-label', 'strict-label', 'delete-label',
-      'rest-label', 'btn-prev', 'btn-next', 'btn-mode', 'btn-rest', 'btn-hand', 'btn-strict', 'btn-delete', 'xr-button', 'exit-button'])
+    for (const id of ['unit', 'gloss', 'mastery', 'mode', 'status', 'hint', 'info', 'mode-label', 'hand-label', 'strict-label',
+      'delete-label', 'preview-label', 'rest-label', 'btn-prev', 'btn-next', 'btn-mode', 'btn-rest', 'btn-hand', 'btn-strict',
+      'btn-delete', 'btn-preview', 'xr-button', 'exit-button'])
       this.el[id] = panel.getElementById(id) as unknown as Element | null;
 
-    this.on('btn-prev', () => { app.step(-1); this.misses = 0; });
-    this.on('btn-next', () => { app.step(1); this.misses = 0; });
+    this.on('btn-prev', () => app.step(-1));
+    this.on('btn-next', () => app.step(1));
     this.on('btn-mode', () => {
       app.mode = app.mode === 'free' ? (STUDIO_ENABLED ? 'studio' : 'practice') : 'free';
       this.say(app.mode === 'free' ? 'Sign any sign you have learned' : 'Copy the shadow hands', '');
@@ -53,6 +54,12 @@ export class LessonSystem extends createSystem({}) {
     this.on('btn-rest', () => {
       this.calibrating = { start: this.now + REST_WAIT_S, samples: [] };
       this.say('Rest your hands', 'Put your hands where they rest between signs, in your lap or at your sides.');
+    });
+    this.on('btn-preview', () => {
+      app.preview = !app.preview;
+      this.say(app.preview ? 'Week preview (simulated)' : 'Your own progress',
+        app.preview ? 'Shows what a week of practice looks like: learned and mastered signs and a streak. Nothing is saved.' : '');
+      app.changed();
     });
     this.on('btn-delete', () => {
       if (this.now < this.deleteArmedUntil) {
@@ -108,20 +115,28 @@ export class LessonSystem extends createSystem({}) {
     }
     const sign = app.current;
     const unit = app.pack.units.find((u) => u.id === sign?.unit);
-    const n = app.signs.length;
-    this.set('unit', sign ? `${unit?.title ?? ''}   ${app.signIndex + 1} of ${n}` : 'No signs');
+    const unitIds = app.signs.filter((s) => s.unit === sign?.unit).map((s) => s.id);
+    const progress = app.progressView;
+    const sum = unitSummary(progress, unitIds);
+    const where = unitIds.indexOf(sign?.id ?? '') + 1;
+    this.set('unit', sign ? `${unit?.title ?? ''}   ${where} of ${sum.total}   (${sum.learned} learned, ${sum.mastered} mastered)` : 'No signs');
     if (app.mode === 'free') {
       this.set('gloss', 'Free Sign');
-      this.set('mode', `Sign any of your ${app.learnedIds.length} learned signs`);
+      this.set('mastery', `${app.learnedIds.length} signs to recognise`);
+      this.set('mode', 'Sign any sign you have learned');
     } else {
       this.set('gloss', sign?.gloss ?? '');
-      const tier = sign?.tier === 'watch' ? 'Watch and copy (not scored)' : sign?.tier === 'lenient' ? 'Copy the shadow hands (gentle check)' : 'Copy the shadow hands';
-      this.set('mode', app.mode === 'studio' ? 'Studio: every attempt is saved as a take' : tier);
+      this.set('mastery', masteryText(progress.signs[sign?.id ?? '']?.level ?? 0));
+      const gentle = sign?.tier === 'lenient' ? ' (gentle check)' : '';
+      const phase = sign?.tier === 'watch' ? 'Watch and copy (not scored)'
+        : app.phase === 'recall' ? 'From memory: the shadow is hidden' : `Copy the shadow hands${gentle}`;
+      this.set('mode', app.mode === 'studio' ? 'Studio: every attempt is saved as a take' : phase);
     }
     this.set('mode-label', app.mode === 'free' ? 'Practice' : 'Free Sign');
     this.set('hand-label', app.settings.leftHanded ? 'Left hand' : 'Right hand');
     this.set('strict-label', STRICTNESS.find(([v]) => v === app.settings.strictness)?.[1] ?? 'Normal');
     this.set('delete-label', 'Delete my data');
+    this.set('preview-label', app.preview ? 'Preview on' : 'Preview');
   }
 
   update(delta: number, time: number): void {
@@ -154,7 +169,9 @@ export class LessonSystem extends createSystem({}) {
       const f = sampler.lastFrame;
       const hands = `${f.present[0] > 0.5 ? 'signing hand' : '-'} / ${f.present[1] > 0.5 ? 'other hand' : '-'}`;
       const dev = import.meta.env.DEV ? `   ${Math.round(this.fps)} fps${app.pack?.distribution === 'internal' ? '   Development pack' : ''}` : '';
-      this.set('info', `Hands: ${hands}   Rest: ${app.settings.restHeight.toFixed(2)}${dev}`);
+      const streak = currentStreak(app.progressView, app.today);
+      const days = streak ? `   Streak: ${streak} day${streak === 1 ? '' : 's'}${app.preview ? ' (simulated)' : ''}` : '';
+      this.set('info', `Hands: ${hands}${days}${dev}`);
     }
   }
 
@@ -192,18 +209,21 @@ export class LessonSystem extends createSystem({}) {
 
     if (r.status === 'unscored') { this.say('Nice', 'This sign is shown for watching and copying. It is not scored.'); return; }
     if (r.status === 'no_hands') { this.say('I lost sight of your hand', hintText(r.hints[0])); return; }
-    app.record(info.id, r.status === 'pass');
     const shadow = this.world.getSystem(ShadowHandsSystem) as ShadowHandsSystem | undefined;
+    const wasRecall = app.phase === 'recall';
+    const out = app.result(info.id, r.status === 'pass');
     if (r.status === 'pass') {
-      this.misses = 0;
-      this.say(`Yes! That is ${info.gloss}`, `Score ${(r.score * 100).toFixed(0)}. Tap Next for the next sign.`);
       if (shadow) shadow.highlightUntil = 0;
+      if (out.event === 'matched') this.say(`Yes! That is ${info.gloss}`, 'Now sign it from memory: the shadow hands are hidden.');
+      else if (out.event === 'mastered') this.say(`Mastered ${info.gloss}!`, 'Recalled on three different days. Tap Next for the next sign.');
+      else this.say(`Well done: ${info.gloss} from memory`, 'Come back tomorrow to master it. Tap Next for the next sign.');
       return;
     }
-    this.misses++;
     const fingers = [0, 1, 2, 3, 4].map((f) => r.hints.some((h) => h.finger === ['thumb', 'index', 'middle', 'ring', 'pinky'][f]));
     if (shadow) { shadow.highlight = fingers; shadow.highlightUntil = this.now + 2.5; }
-    const own = this.misses >= 2 && info.hint ? ` ${info.hint}` : '';
-    this.say('Not quite', `${r.hints[0] ? hintText(r.hints[0], this.gloss) : 'Try again.'}${own}`);
+    const hint = r.hints[0] ? hintText(r.hints[0], this.gloss) : 'Try again.';
+    const own = app.misses >= 2 && info.hint ? ` ${info.hint}` : '';
+    if (out.event === 'back_to_match') this.say("Let's look again", `The shadow hands are back. ${hint}`);
+    else this.say(wasRecall ? 'Not quite, try once more from memory' : 'Not quite', `${hint}${own}`);
   }
 }

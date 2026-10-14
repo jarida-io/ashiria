@@ -26,7 +26,7 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, proje
     nav.xr.isSessionSupported('immersive-ar').then((ok) => { if (ok) world.launchXR(); }).catch(() => {});
   }
   loadPack().then(
-    (pack) => { app.pack = pack; app.changed(); },
+    (pack) => { app.pack = pack; app.goTo(0); },
     (err) => { app.packError = String(err instanceof Error ? err.message : err); app.changed(); },
   );
 });

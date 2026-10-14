@@ -3,6 +3,7 @@
  * Settings and progress live only on this device (localStorage); hand data is never stored or sent anywhere.
  */
 import { defaultParams, type ContentPack, type EngineParams } from '@ashiria/engine';
+import { applyResult, dayOf, emptyProgress, learned, seen, simulatedWeek, type Outcome, type Phase, type Progress } from './flow.js';
 
 export type Mode = 'practice' | 'free' | 'studio';
 
@@ -13,10 +14,10 @@ export interface Settings {
   shoulderWidth: number;  // metres
 }
 
-export interface Progress { passed: Record<string, number>; attempts: Record<string, number> }
-
 const SETTINGS_KEY = 'ashiria.settings.v1';
-const PROGRESS_KEY = 'ashiria.progress.v1';
+const PROGRESS_KEY = 'ashiria.progress.v2';
+/** Everything this app keeps on the device (Delete my data / Start over remove all of it). */
+const STORAGE_KEYS = [SETTINGS_KEY, PROGRESS_KEY, 'ashiria.progress.v1', 'ashiria.name.v1', 'ashiria.wall.v1', 'iwsdk_scene_anchor_uuid'];
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -51,7 +52,12 @@ class AppState {
   mode: Mode = STUDIO_ENABLED ? 'studio' : 'practice';
   signIndex = 0;
   settings: Settings = load(SETTINGS_KEY, { leftHanded: false, strictness: 1, restHeight: -1.5, shoulderWidth: 0.38 });
-  progress: Progress = load(PROGRESS_KEY, { passed: {}, attempts: {} });
+  progress: Progress = load(PROGRESS_KEY, emptyProgress());
+  /** Practice phase for the current sign, and misses in that phase. */
+  phase: Phase = 'match';
+  misses = 0;
+  /** Judge preview: show a simulated week of progress (never saved). */
+  preview = false;
   private listeners = new Set<() => void>();
 
   /** Signs in teaching order (units, then order within the unit). */
@@ -64,11 +70,18 @@ class AppState {
 
   get current() { return this.signs[this.signIndex] ?? null; }
 
-  /** Signs the user has passed at least once: Free Sign recognises among these (all recognisable signs until then). */
+  get today(): string { return dayOf(new Date()); }
+
+  /** The progress to show: the user's own, or a simulated week in judge preview. */
+  get progressView(): Progress {
+    return this.preview ? simulatedWeek(this.signs.map((s) => s.id), this.today) : this.progress;
+  }
+
+  /** Signs matched or better: Free Sign recognises among these (all recognisable signs until two are learned). */
   get learnedIds(): string[] {
     const recognisable = this.signs.filter((s) => s.recognise).map((s) => s.id);
-    const learned = recognisable.filter((id) => (this.progress.passed[id] ?? 0) > 0);
-    return learned.length >= 2 ? learned : recognisable;
+    const ids = learned(this.progressView, recognisable);
+    return ids.length >= 2 ? ids : recognisable;
   }
 
   /** Engine parameters: the pack's, with the user's own rest height. */
@@ -82,24 +95,38 @@ class AppState {
 
   updateSettings(patch: Partial<Settings>): void { this.settings = { ...this.settings, ...patch }; save(SETTINGS_KEY, this.settings); this.changed(); }
 
-  record(signId: string, passed: boolean): void {
-    this.progress.attempts[signId] = (this.progress.attempts[signId] ?? 0) + 1;
-    if (passed) this.progress.passed[signId] = (this.progress.passed[signId] ?? 0) + 1;
+  /** Apply a Verify result to the current sign: updates progress, phase and misses, and saves. */
+  result(signId: string, passed: boolean): Outcome {
+    const out = applyResult(this.progress, signId, this.phase, passed, this.misses, this.today);
+    this.misses = out.phase !== this.phase || passed ? 0 : this.misses + 1;
+    this.phase = out.phase;
     save(PROGRESS_KEY, this.progress);
+    this.changed();
+    return out;
   }
 
-  /** Settings → Delete my data: erase progress and settings from this device. */
+  /** Delete my data / Start over: erase everything this app stored on the device. */
   deleteMyData(): void {
-    try { localStorage.removeItem(SETTINGS_KEY); localStorage.removeItem(PROGRESS_KEY); } catch { /* ignore */ }
-    this.progress = { passed: {}, attempts: {} };
+    try { STORAGE_KEYS.forEach((k) => localStorage.removeItem(k)); } catch { /* ignore */ }
+    this.progress = emptyProgress();
     this.settings = { leftHanded: false, strictness: 1, restHeight: -1.5, shoulderWidth: 0.38 };
+    this.preview = false;
+    this.goTo(0);
+  }
+
+  /** Show sign i: back to the match phase, and mark it seen. */
+  goTo(i: number): void {
+    const n = this.signs.length;
+    if (!n) { this.changed(); return; }
+    this.signIndex = ((i % n) + n) % n;
+    this.phase = 'match';
+    this.misses = 0;
+    seen(this.progress, this.signs[this.signIndex].id);
+    save(PROGRESS_KEY, this.progress);
     this.changed();
   }
 
-  step(by: number): void {
-    const n = this.signs.length;
-    if (n) { this.signIndex = (this.signIndex + by + n) % n; this.changed(); }
-  }
+  step(by: number): void { this.goTo(this.signIndex + by); }
 }
 
 export const app = new AppState();
