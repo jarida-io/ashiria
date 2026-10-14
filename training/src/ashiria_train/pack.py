@@ -204,6 +204,7 @@ def write_pack(catalogue: dict, sources: dict, missing: list[str], rights: dict,
     print(f"{pack_id} {catalogue['version']} ({manifest['distribution']}): {len(ids)} signs "
           f"({tiers.count('scored')} scored, {tiers.count('lenient')} lenient, {tiers.count('watch')} watch-only), "
           f"{size:.1f} MB -> {out}")
-    if not release and any(s.kind == "ksl_dictionary" for s in sources.values()):
-        print("Internal pack: KSL Dictionary drafts are for development only. Do not distribute it.")
+    if not release:
+        print("Internal pack, for development. For the hosted app, approve signs (`ashiria approve`) and build "
+              "with --release.")
     return out

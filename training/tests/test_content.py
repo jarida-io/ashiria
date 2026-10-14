@@ -8,7 +8,7 @@ import pytest
 
 from ashiria_train.augment import rotation
 from ashiria_train.canonical import steadiest_frame
-from ashiria_train.catalogue import load_catalogue, parse_vocabulary, update_catalogue
+from ashiria_train.catalogue import load_catalogue, parse_vocabulary, set_review, update_catalogue
 from ashiria_train.config import Config
 from ashiria_train.matching import segment_descriptor
 from ashiria_train.pack import FORBIDDEN_KEYS, forbidden_keys, release_selection, take_segment, write_pack
@@ -41,6 +41,13 @@ def test_vocabulary_units_and_ids(tmp_path):
     vocab.write_text(vocab.read_text() + "hello\n")
     cat = load_catalogue(update_catalogue(cfg, vocab, "test"))
     assert cat["signs"][0]["hint"] == "Thumb along the side" and cat["signs"][-1]["id"] == "hello"
+    # Reviews change only the review fields.
+    set_review(cfg, "test", ["letter-a", "hello"], "approved", "Jerry")
+    cat = load_catalogue(file)
+    assert cat["signs"][0]["review"]["status"] == "approved" and cat["signs"][0]["hint"] == "Thumb along the side"
+    assert cat["signs"][1]["review"]["status"] == "draft"
+    with pytest.raises(ValueError):
+        set_review(cfg, "test", ["no-such-sign"], "approved")
 
 
 def test_tier_rules():

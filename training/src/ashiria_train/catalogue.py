@@ -128,3 +128,25 @@ def validate(cat: dict) -> None:
             problems.append(f"{sid}: review.status must be one of {', '.join(REVIEW_STATUS)}")
     if problems:
         raise ValueError("catalogue problems:\n  " + "\n  ".join(problems))
+
+
+def set_review(cfg: Config, pack_id: str, ids: list[str], status: str, by: str | None = None) -> list[str]:
+    """Record a review decision (approved | rejected | draft) for signs in the catalogue; returns the ids changed.
+    Only review fields change; every other edit in the file is kept (comments are rewritten to the header)."""
+    import datetime
+
+    if status not in REVIEW_STATUS:
+        raise ValueError(f"status must be one of {', '.join(REVIEW_STATUS)}")
+    file = catalogue_file(cfg, pack_id)
+    cat = load_catalogue(file)
+    known = {s["id"]: s for s in cat["signs"]}
+    unknown = [i for i in ids if i not in known]
+    if unknown:
+        raise ValueError(f"unknown sign ids: {', '.join(unknown)}")
+    today = datetime.date.today().isoformat()
+    for i in ids:
+        known[i]["review"] = {"status": status, "by": by if status != "draft" else None,
+                              "date": today if status != "draft" else None}
+    validate(cat)
+    file.write_text(HEADER + yaml.safe_dump(cat, sort_keys=False, allow_unicode=True, width=120))
+    return ids
