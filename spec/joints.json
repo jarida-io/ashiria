@@ -1,0 +1,20 @@
+{
+  "spec_version": 1,
+  "canonical_joints": [
+    "wrist",
+    "thumb_cmc", "thumb_mcp", "thumb_ip", "thumb_tip",
+    "index_mcp", "index_pip", "index_dip", "index_tip",
+    "middle_mcp", "middle_pip", "middle_dip", "middle_tip",
+    "ring_mcp", "ring_pip", "ring_dip", "ring_tip",
+    "pinky_mcp", "pinky_pip", "pinky_dip", "pinky_tip"
+  ],
+  "quest_openxr_index": [1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 19, 20, 22, 23, 24, 25],
+  "slots": {"0": "dominant hand (signer's right before canonicalisation)", "1": "other hand"},
+  "seq_len": 32,
+  "feature_dim": 197,
+  "hand_block": 97,
+  "gap_fill_frames": 5,
+  "rest_height": -1.8,
+  "trim_margin_frames": 2,
+  "default_shoulder_width_m": 0.38
+}

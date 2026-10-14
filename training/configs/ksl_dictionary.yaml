@@ -1,0 +1,20 @@
+# The KSL Dictionary scrape (moved here from KSL_Dictionary_Extractor/ksl_videos, which is now a link
+# to this folder): one video per sign from a single source.
+# Good for reference templates (`ashiria references`), not for training a classifier.
+# Rights: the KSL Dictionary's copyright. Local development only until its owners agree.
+extends: default.yaml
+
+paths:
+  raw_videos: data/raw/ksl_dictionary
+  landmarks: data/dictionary/landmarks
+  manifests: data/dictionary/manifests
+  cache: data/dictionary/cache
+  exports: exports/dictionary
+
+labels:
+  mode: csv
+  csv: data/dictionary/manifests/dictionary_labels.csv
+  lowercase: true
+
+dictionary:
+  source_csv: data/raw/ksl_dictionary/ksl_dictionary_data.csv

@@ -1,0 +1,82 @@
+# Candidate v1 vocabulary for the Deaf co-creators to choose from. One sign per line.
+# A word matches a dictionary sign's name or any of its aliases; "mother" also finds "mother 1".
+
+# Unit 1: spell your name (the dictionary has 24 letters, no I or J)
+a
+b
+c
+d
+e
+f
+g
+h
+k
+l
+m
+n
+o
+p
+q
+r
+s
+t
+u
+v
+w
+x
+y
+z
+
+# Unit 2: numbers
+zero
+one
+two
+three
+four
+five
+six
+seven
+eight
+nine
+ten
+
+# Unit 3: everyday signs
+hello
+goodbye
+thank you
+good morning
+good night
+sorry
+help
+fine
+again
+deaf
+mother
+father
+sister
+brother
+baby
+child
+family
+friend
+teacher
+student
+love
+happy
+sad
+eat
+drink
+water
+food
+book
+
+# Unit 4: around the house (Room Words)
+table
+chair
+door
+window
+bed
+television
+cup
+plate
+phone

@@ -1,0 +1,17 @@
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Training data and outputs: videos of people and everything derived from them
+training/data/
+training/runs/
+training/exports/
+training/models/

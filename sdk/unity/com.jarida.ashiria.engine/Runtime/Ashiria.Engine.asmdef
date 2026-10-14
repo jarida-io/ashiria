@@ -1,0 +1,11 @@
+{
+  "name": "Ashiria.Engine",
+  "rootNamespace": "Ashiria.Engine",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "autoReferenced": true,
+  "noEngineReferences": true
+}

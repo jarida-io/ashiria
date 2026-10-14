@@ -1,0 +1,82 @@
+# Ashiria training pipeline
+
+Turns sign videos into a small model that recognises signs offline on Quest.
+
+```
+videos ─audit─▶ manifest ─extract─▶ MediaPipe hand + body landmarks ─build─▶ canonical segments
+       ─train─▶ SignNet (1D conv + Transformer, ~2M params) ─export─▶ ONNX + metadata ─▶ Unity Sentis
+```
+
+The model never sees video pixels. On the headset there is no camera image of the user's hands, only tracked joints. So training turns each video into hand-joint sequences, and the headset produces the same sequences from Quest hand tracking. The rules for that are in [`spec/FEATURE_SPEC.md`](../spec/FEATURE_SPEC.md), which every app shares.
+
+## Setup (once)
+
+```bash
+make setup         # Python 3.12 virtualenv in .venv: enough for audit, extract, check and references
+make setup-train   # adds PyTorch, ONNX and scikit-learn for baseline, train, evaluate and export
+make models        # MediaPipe hand and pose models into models/mediapipe/
+make test
+```
+
+After extracting, run `ashiria check` before building anything. It confirms that the hand slots and the hand/body coordinate axes agree on your footage.
+
+## Steps
+
+| Step | Command | Writes |
+|---|---|---|
+| 1. Audit | `make audit` | `data/manifests/videos.csv`, `data/manifests/audit_report.md` |
+| 2. Extract | `make extract` | `data/landmarks/<clip_id>.npz`, `data/manifests/extraction.csv` |
+| 3. Build | `make build` | `data/cache/segments.npz`, `index.csv`, `labels.json` |
+| 4. Baseline | `make baseline` | nearest-neighbour accuracy, printed |
+| 5. Train | `make train NAME=v1` | `runs/v1/best.pt`, `metrics.csv` |
+| 6. Evaluate | `make evaluate RUN=runs/v1` | `runs/v1/report.md`, `eval.json`, `confusion.csv` |
+| 7. Export | `make export RUN=runs/v1` | `exports/v1/model.onnx`, `model_meta.json`, `labels.json`, `golden.json` |
+
+**Before you trust a model:**
+- **Check the audit report first.** It shows how labels and signers were read from your file names. Fix `labels` in `configs/default.yaml` until they're right.
+- **Test the extraction on a few clips** with `.venv/bin/ashiria extract --limit 20` before running all of them.
+- **Expect lower accuracy on the headset.** The baseline and test accuracy are measured on videos. The real check is a small set of Quest recordings run through the same steps.
+
+## KSL Dictionary videos (old work)
+
+`data/raw/ksl_dictionary/` holds the videos scraped from ksldictionary.com in May 2025. They were moved here from `~/Documents/KSL_Dictionary_Extractor/ksl_videos`, which is now a link to this folder.
+
+What the folder contains:
+- **2,694 unique videos.** The site lists every sign twice, so there are 8,894 files.
+- **One video per sign, from one source.**
+- **Per-sign metadata:** English glosses (aliases), category, and handshape and movement descriptions.
+
+That makes it a **reference library, not a training set**. A classifier can't learn a sign from a single example signed by a single person.
+
+```bash
+make dictionary      # import labels → audit → extract landmarks → references for configs/vocabulary_v1.txt
+```
+
+Then `ashiria check` (are the hand slots and coordinate axes consistent?) and `ashiria simulate` (an optimistic Free Sign test: how often a perturbed reference is matched back to itself among the vocabulary).
+
+This writes these files to `exports/dictionary/references/`:
+- **`references.csv`:** tags for every sign (one or two hands, static or moving, near the face, hands close together, tracking quality), to help the co-creators pick a vocabulary the headset can check.
+- **`references.json`:** for each vocabulary sign, the shadow-hand animation, the target finger angles, and the dictionary's description.
+- **`lookalikes.csv`:** each vocabulary sign's nearest neighbours by matching distance, i.e. the likely confusions.
+- **`simulated_recognition.csv`:** per-sign top-1 and top-3 from `ashiria simulate`.
+
+**Rights:** the videos are the KSL Dictionary's copyright and carry no licence. Keep this to local development until the owners agree in writing. Nothing derived from these videos ships without that permission.
+
+## Where the videos go
+
+- Copy them into `data/raw/videos/`, in any sub-folders.
+- Or point `paths.raw_videos` in the config at wherever they are, such as an external drive.
+
+Landmark files are small (roughly 100 KB per clip), so the raw videos don't have to stay on this Mac after extraction.
+
+## Data rules
+
+- These are videos of people, and that makes them personal data under Kenya's Data Protection Act. Only use videos whose signers agreed to this use.
+- Keep them, and everything under `data/`, `runs/` and `exports/`, out of git and out of cloud services. The `.gitignore` already excludes them.
+- The app ships only the exported model. It never sends hand data anywhere.
+
+## Still to add once we've seen the data
+
+- A "none" class (rest poses and movement between signs), so the app can reject non-signs.
+- Quest validation: record a small test set on the headset and report accuracy on it next to the video test set.
+- Fine-tuning on Quest recordings if the gap between the two is large.

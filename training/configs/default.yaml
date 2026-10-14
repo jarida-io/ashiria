@@ -1,0 +1,73 @@
+# Paths are relative to the training/ folder unless absolute.
+paths:
+  raw_videos: data/raw/videos      # point this at the copied videos (an external drive is fine)
+  landmarks: data/landmarks
+  manifests: data/manifests
+  cache: data/cache
+  runs: runs
+  exports: exports
+  mediapipe_models: models/mediapipe
+
+video_extensions: [.mp4, .mov, .avi, .mkv, .webm, .m4v, .wmv, .mpg, .mpeg, .3gp]
+
+# How the sign label and signer are read for each video. Check the audit report after changing.
+labels:
+  mode: folder        # folder: label = name of a parent folder | regex: groups from the file name | csv: a lookup file
+  folder_level: 1     # folder mode: 1 = the folder that directly contains the video, 2 = the one above, ...
+  regex: '^(?P<label>.+?)_(?P<signer>[^_]+)_(?P<take>\d+)$'   # regex mode: matched against the file name without extension
+  signer_regex: null  # optional, any mode: regex with a (?P<signer>...) group, searched in the relative path
+  csv: null           # csv mode: columns path,label[,signer]; path relative to raw_videos
+  lowercase: true
+
+extract:
+  target_fps: 30            # frames per second sent to MediaPipe (Quest hand tracking runs at 30 Hz)
+  max_frames: 300           # stop after this many processed frames (10 s at 30 fps)
+  min_hand_detection_confidence: 0.5
+  min_hand_presence_confidence: 0.5
+  min_tracking_confidence: 0.5
+  pose_model: pose_landmarker_full.task
+  videos_are_mirrored: false   # true if the camera saved selfie-style (left-right flipped) footage
+  workers: 6
+
+features:
+  seq_len: 32                # frames per sign after resampling; must match the headset
+  gap_fill_frames: 5         # fill hand dropouts up to this many frames by interpolation
+  rest_height: -1.8          # wrists below this (shoulder widths below the nose) count as resting
+  trim_margin_frames: 2
+  min_present_ratio: 0.3     # drop clips where no hand is visible in most frames
+  dominant_hand: per_signer  # per_signer | per_clip | right | left
+  quest_shoulder_width_m: 0.38
+
+split:
+  val_fraction: 0.15
+  test_fraction: 0.15
+  min_clips_per_class: 5
+  seed: 13
+
+train:
+  model:
+    dim: 192
+    stages: 3
+    conv_per_stage: 2
+    kernel_size: 11
+    heads: 4
+    dropout: 0.2
+  epochs: 150
+  batch_size: 64
+  lr: 0.002
+  weight_decay: 0.05
+  label_smoothing: 0.1
+  warmup_epochs: 5
+  patience: 30
+  device: auto               # auto | mps | cpu | cuda
+  seed: 13
+  augment:
+    rotate_deg: 15           # whole-body rotation (yaw; pitch and roll get half)
+    hand_rotate_deg: 8       # extra rotation of each hand around its wrist
+    wrist_scale: 0.1         # body-size mismatch
+    wrist_shift: 0.08        # reference-point mismatch, in shoulder widths
+    joint_noise_m: 0.006     # tracking jitter per joint
+    speed: [0.8, 1.25]
+    edge_crop: 0.1           # trim up to this fraction off each end (segmentation error)
+    frame_drop: 0.05
+    hand_drop: 0.05          # chance of losing one hand for a stretch of the clip
