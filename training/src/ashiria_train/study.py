@@ -65,3 +65,36 @@ def study_data(cfg: Config, pack_id: str = "ksl-core") -> dict:
 def video_roots() -> list[Path]:
     """Folders the dev server may stream videos from."""
     return [path(load_config(DICTIONARY_CONFIG), "raw_videos").resolve(), training_relative("data").resolve()]
+
+
+def dictionary_index() -> list[dict]:
+    """Every extracted KSL Dictionary clip for the dev-only sign browser: id, sign, aliases, category, description."""
+    dcfg = load_config(DICTIONARY_CONFIG)
+    manifest = path(dcfg, "manifests") / "videos.csv"
+    landmarks = path(dcfg, "landmarks")
+    if not manifest.exists():
+        return []
+    df = pd.read_csv(manifest, dtype=str).fillna("")
+    raw = path(dcfg, "raw_videos")
+    out = []
+    for _, r in df.iterrows():
+        if not (landmarks / f"{r['clip_id']}.npz").exists() or not (raw / r["path"]).exists():
+            continue
+        out.append({"clip_id": r["clip_id"], "sign": r["label"], "aliases": r.get("aliases", ""),
+                    "category": r.get("category", ""), "description": r.get("description", ""),
+                    "video": str((raw / r["path"]).resolve())})
+    return sorted(out, key=lambda x: x["sign"])
+
+
+def clip_landmarks(clip_id: str) -> dict:
+    """MediaPipe image landmarks of one clip (x, y in 0..1 of the frame), frame k at k / fps seconds."""
+    if not clip_id.isalnum():
+        raise ValueError("bad clip id")
+    file = path(load_config(DICTIONARY_CONFIG), "landmarks") / f"{clip_id}.npz"
+    with np.load(file) as d:
+        return {"fps": float(d["fps"]),
+                "hand": np.round(d["hand_image"][..., :2], 4).tolist(),        # [T][2 slots: right, left][21][x, y]
+                "hand_present": d["hand_present"].astype(int).tolist(),
+                "hand_score": np.round(d["hand_score"], 2).tolist(),
+                "pose": np.round(d["pose_image"][:, :25, :2], 4).tolist(),     # upper body only
+                "pose_present": d["pose_present"].astype(int).tolist()}

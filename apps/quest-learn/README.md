@@ -41,7 +41,11 @@ With `npm run dev` running, open `https://localhost:8081/dev/study/` on the Mac.
   (`ashiria approve`);
 - the release pack ships only approved signs.
 
-This is development only: the videos never leave this Mac and are never built into the app.
+**Sign browser:** `https://localhost:8081/dev/study/browse` shows every extracted KSL Dictionary sign (2,548), with
+MediaPipe's hand and body landmarks drawn over the video. It has search, category filter, slow motion and joint
+numbers.
+
+Both pages are development only: the videos never leave this Mac and are never built into the app.
 
 ## Studio (recording reference signs)
 

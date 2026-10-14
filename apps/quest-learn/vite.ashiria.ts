@@ -7,7 +7,8 @@
  *   into the app.
  * - POST /dev/studio: saves a Studio take (spec/STUDIO_FORMAT.md) to ../../training/data/studio/<session>/.
  * - /dev/study: the study sheet (dev/study.html): each sign's local dictionary video next to its reference hands,
- *   with Approve / Reject buttons that run `ashiria approve`. The videos never leave this Mac.
+ *   with Approve / Reject buttons that run `ashiria approve`. /dev/study/browse: every extracted dictionary sign
+ *   with MediaPipe's landmarks drawn over its video. The videos never leave this Mac.
  *
  * Production builds only bundle packs from public/packs/, and refuse any that is not a release pack
  * (`ashiria pack --release`: Studio-recorded, approved signs only).
@@ -99,10 +100,35 @@ export function ashiriaDev(): Plugin {
       });
 
       let videos = new Map<string, string>();
+      let clips = new Map<string, string>();
+      let indexText = '';
+      const landmarkCache = new Map<string, string>();
       server.middlewares.use('/dev/study', async (req, res) => {
         const url = (req.url ?? '/').split('?')[0];
         try {
           if (url === '/' || url === '') return send(res, 200, readFileSync(join(__dirname, 'dev/study.html'), 'utf8'), 'text/html');
+          if (url === '/browse' || url === '/browse/') return send(res, 200, readFileSync(join(__dirname, 'dev/browse.html'), 'utf8'), 'text/html');
+          if (url === '/index.json') {
+            if (!indexText) {
+              indexText = await ashiria(['study-index']);
+              clips = new Map((JSON.parse(indexText) as { clip_id: string; video: string }[]).map((c) => [c.clip_id, c.video]));
+            }
+            return send(res, 200, indexText);
+          }
+          const lm = /^\/landmarks\/([a-f0-9]+)$/.exec(url);
+          if (lm) {
+            if (!landmarkCache.has(lm[1])) {
+              if (landmarkCache.size > 200) landmarkCache.clear();
+              landmarkCache.set(lm[1], await ashiria(['study-landmarks', lm[1]]));
+            }
+            return send(res, 200, landmarkCache.get(lm[1]) as string);
+          }
+          const clip = /^\/clip\/([a-f0-9]+)$/.exec(url);
+          if (clip) {
+            const file = clips.get(clip[1]);
+            if (!file || !resolve(file).startsWith(VIDEO_ROOT + '/') || !existsSync(file)) return send(res, 404, { error: 'no video' });
+            return sendVideo(req, res, file);
+          }
           if (url === '/data.json') {
             const text = await ashiria(['study-data']);
             const data = JSON.parse(text) as { signs: { id: string; video: string | null }[] };

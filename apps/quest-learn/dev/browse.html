@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ashiria sign browser</title>
+<style>
+  :root { --bg: #f6f7f8; --card: #fff; --ink: #1d1d1f; --muted: #6b6f76; --line: #e3e5e8; --sel: #e6f6fa; --accent: #0b6e8a; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111315; --card: #1b1e21; --ink: #eef0f2; --muted: #9aa0a6; --line: #2b2f33; --sel: #12323b; --accent: #4fd1e8; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 -apple-system, system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 12px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  h1 { font-size: 17px; margin: 0; }
+  a { color: var(--accent); }
+  .muted { color: var(--muted); }
+  .wrap { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+  aside { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .filters { padding: 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--line); }
+  input, select { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+  li { padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  li:hover { background: var(--sel); }
+  li.on { background: var(--sel); font-weight: 600; }
+  li small { display: block; color: var(--muted); font-weight: 400; }
+  main { padding: 16px 20px; overflow-y: auto; }
+  .stage { position: relative; max-width: 720px; background: #000; border-radius: 10px; overflow: hidden; }
+  .stage video { width: 100%; display: block; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .controls { display: flex; gap: 14px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+  label { display: flex; gap: 6px; align-items: center; }
+  .sign { font-size: 24px; font-weight: 700; margin: 0 0 4px; }
+  .desc { max-width: 720px; }
+  .legend span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 4px 0 10px; }
+  .empty { color: var(--muted); padding: 40px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sign browser</h1>
+  <span class="muted" id="count">Loading...</span>
+  <a href="/dev/study/">Study sheet (v1 signs)</a>
+  <span class="muted">Development only: the dictionary videos and landmarks never leave this Mac.</span>
+</header>
+<div class="wrap">
+  <aside>
+    <div class="filters">
+      <input id="q" type="search" placeholder="Search signs or aliases" autofocus />
+      <select id="cat"><option value="">All categories</option></select>
+    </div>
+    <ul id="list"></ul>
+  </aside>
+  <main id="main"><div class="empty">Pick a sign on the left.</div></main>
+</div>
+<script>
+const FINGERS = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]];
+const HAND_BONES = FINGERS.flatMap((c) => [[0, c[0]], [c[0], c[1]], [c[1], c[2]], [c[2], c[3]]]).concat([[5, 9], [9, 13], [13, 17]]);
+// MediaPipe pose, upper body: shoulders, elbows, wrists, and the face outline points.
+const POSE_BONES = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [9, 10], [0, 7], [0, 8]];
+const COLORS = ['#4fd1e8', '#b49cff'];
+let index = [], shown = [], current = null, raf = 0;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function filter() {
+  const q = $('q').value.trim().toLowerCase(), cat = $('cat').value;
+  shown = index.filter((x) => (!cat || x.category === cat) && (!q || x.sign.toLowerCase().includes(q) || x.aliases.toLowerCase().includes(q)));
+  $('list').innerHTML = shown.slice(0, 600).map((x, i) =>
+    `<li data-i="${i}" class="${current && current.clip_id === x.clip_id ? 'on' : ''}">${esc(x.sign)}<small>${esc(x.category)}${x.aliases ? ' - ' + esc(x.aliases) : ''}</small></li>`).join('');
+  $('count').textContent = `${shown.length} of ${index.length} signs${shown.length > 600 ? ' (first 600 listed; refine the search)' : ''}`;
+}
+
+async function open(x) {
+  current = x;
+  cancelAnimationFrame(raf);
+  document.querySelectorAll('li').forEach((li) => li.classList.toggle('on', shown[+li.dataset.i]?.clip_id === x.clip_id));
+  $('main').innerHTML = `
+    <div class="sign">${esc(x.sign)}</div>
+    <div class="muted">${esc(x.category)}${x.aliases ? ' - also: ' + esc(x.aliases) : ''}</div>
+    <div class="controls">
+      <label><input type="checkbox" id="hands" checked /> Hands</label>
+      <label><input type="checkbox" id="body" checked /> Body</label>
+      <label><input type="checkbox" id="dots" /> Joint numbers</label>
+      <label>Speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option></select></label>
+      <span class="legend"><span style="background:${COLORS[0]}"></span>signer's right<span style="background:${COLORS[1]}"></span>left</span>
+      <span class="muted" id="rate"></span>
+    </div>
+    <div class="stage"><video id="video" src="/dev/study/clip/${x.clip_id}" muted loop autoplay playsinline controls></video><canvas id="overlay"></canvas></div>
+    <p class="desc">${esc(x.description)}</p>`;
+  $('speed').addEventListener('change', () => ($('video').playbackRate = +$('speed').value));
+  const res = await fetch(`/dev/study/landmarks/${x.clip_id}`);
+  if (!res.ok) { $('rate').textContent = 'Could not load landmarks'; return; }
+  const lm = await res.json();
+  if (current !== x) return;
+  const n = lm.hand_present.length;
+  const pct = (slot) => Math.round((100 * lm.hand_present.filter((p) => p[slot]).length) / Math.max(n, 1));
+  $('rate').textContent = `${n} frames at ${lm.fps.toFixed(0)} fps - right hand found in ${pct(0)}%, left in ${pct(1)}%`;
+  draw(lm);
+}
+
+function draw(lm) {
+  const video = $('video'), canvas = $('overlay');
+  if (!video || !canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = (canvas.width = canvas.clientWidth * devicePixelRatio), h = (canvas.height = canvas.clientHeight * devicePixelRatio);
+  ctx.clearRect(0, 0, w, h);
+  const k = Math.min(lm.hand_present.length - 1, Math.floor(video.currentTime * lm.fps));
+  const line = (pts, bones, color, width) => {
+    ctx.strokeStyle = color; ctx.lineWidth = width * devicePixelRatio; ctx.lineCap = 'round';
+    for (const [a, b] of bones) {
+      if (!pts[a] || !pts[b]) continue;
+      ctx.beginPath(); ctx.moveTo(pts[a][0] * w, pts[a][1] * h); ctx.lineTo(pts[b][0] * w, pts[b][1] * h); ctx.stroke();
+    }
+  };
+  if ($('body').checked && lm.pose_present[k]) line(lm.pose[k], POSE_BONES, 'rgba(255,255,255,0.55)', 2);
+  if ($('hands').checked) {
+    for (let s = 0; s < 2; s++) {
+      if (!lm.hand_present[k][s]) continue;
+      const pts = lm.hand[k][s];
+      line(pts, HAND_BONES, COLORS[s], 2.5);
+      ctx.fillStyle = COLORS[s];
+      pts.forEach(([x, y], j) => {
+        ctx.beginPath(); ctx.arc(x * w, y * h, (j % 4 === 0 && j ? 3.5 : 2.5) * devicePixelRatio, 0, 7); ctx.fill();
+        if ($('dots').checked) { ctx.font = `${10 * devicePixelRatio}px system-ui`; ctx.fillText(String(j), x * w + 4, y * h - 4); }
+      });
+    }
+  }
+  raf = requestAnimationFrame(() => draw(lm));
+}
+
+fetch('/dev/study/index.json').then((r) => (r.ok ? r.json() : r.text().then((t) => Promise.reject(t)))).then((d) => {
+  index = d;
+  [...new Set(d.map((x) => x.category).filter(Boolean))].sort().forEach((c) => $('cat').insertAdjacentHTML('beforeend', `<option>${esc(c)}</option>`));
+  filter();
+  const wanted = new URLSearchParams(location.search).get('sign');
+  const first = wanted ? d.find((x) => x.sign.toLowerCase() === wanted.toLowerCase()) : null;
+  if (first) open(first);
+}, (err) => { $('count').textContent = 'Could not load: ' + err; });
+$('q').addEventListener('input', filter);
+$('cat').addEventListener('change', filter);
+$('list').addEventListener('click', (e) => { const li = e.target.closest('li'); if (li) open(shown[+li.dataset.i]); });
+</script>
+</body>
+</html>

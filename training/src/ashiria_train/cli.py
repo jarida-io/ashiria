@@ -60,6 +60,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--pack", default="ksl-core")
     p = steps.add_parser("study-data", help="JSON for the dev-only study sheet (catalogue, reviews, videos, previews)")
     p.add_argument("--pack", default="ksl-core")
+    steps.add_parser("study-index", help="JSON index of every extracted dictionary clip (dev-only sign browser)")
+    p = steps.add_parser("study-landmarks", help="JSON MediaPipe image landmarks of one dictionary clip")
+    p.add_argument("clip_id")
     p = steps.add_parser("catalogue", help="create or extend content/catalogue/<pack>.yaml from a vocabulary file")
     p.add_argument("--vocab", default="configs/vocabulary_v1.txt")
     p.add_argument("--pack", default="ksl-core")
@@ -124,6 +127,14 @@ def main(argv: list[str] | None = None) -> None:
         import json as _json
         from .study import study_data
         print(_json.dumps(study_data(cfg, args.pack)))
+    elif args.step == "study-index":
+        import json as _json
+        from .study import dictionary_index
+        print(_json.dumps(dictionary_index()))
+    elif args.step == "study-landmarks":
+        import json as _json
+        from .study import clip_landmarks
+        print(_json.dumps(clip_landmarks(args.clip_id)))
     elif args.step == "catalogue":
         from .catalogue import update_catalogue
         update_catalogue(cfg, args.vocab, args.pack)
