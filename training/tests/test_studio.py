@@ -35,7 +35,7 @@ def test_head_axes_and_presence_rules():
     # Looking straight up keeps the previous axes.
     hands = {"right": {"joints": np.zeros((26, 3)), "tracked": True, "high_confidence": True}}
     last = quest.head_axes(np.array([1.0, 0.0, 0.0]))[0]
-    *_, axes = quest.frame([0, 1.6, 0], [-np.sqrt(0.5), 0, 0, np.sqrt(0.5)], hands, False, last_axes=last)
+    *_, axes = quest.frame([0, 1.6, 0], [0.0, 1.0, 0.0], hands, False, last_axes=last)
     assert np.allclose(axes, last)
 
 

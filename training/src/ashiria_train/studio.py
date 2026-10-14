@@ -78,7 +78,7 @@ def canonical_from_raw(take: dict) -> Segment:
                         "high_confidence": take[f"_{side}"]["high_conf"][t], "inferred": take[f"_{side}"]["inferred"][t],
                         "system_gesture": take[f"_{side}"]["system_gesture"][t]} for side in SIDES}
         hand_rel[t], wrist_pos[t], present[t], axes = quest.frame(
-            take["_head_pos"][t], take["_head_rot"][t], hands, take["handedness"] == "left",
+            take["_head_pos"][t], quest.rotate(take["_head_rot"][t], [0.0, 0.0, 1.0]), hands, take["handedness"] == "left",
             float(take.get("shoulder_width_m", quest.DEFAULT_SHOULDER_WIDTH_M)), axes)
     return Segment(hand_rel, wrist_pos, present, float(take["tick_hz"]))
 

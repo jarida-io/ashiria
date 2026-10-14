@@ -47,6 +47,12 @@ def segment_descriptor(seg, weights: dict | None = None) -> np.ndarray:
     return descriptor(segment_features(seg), weights)
 
 
+def _cost(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Frame-to-frame Euclidean distances in float64 (as the C# port computes them)."""
+    a, b = np.asarray(a, np.float64), np.asarray(b, np.float64)
+    return np.sqrt(((a[:, None, :] - b[None, :, :]) ** 2).sum(-1))
+
+
 def _accumulate(cost: np.ndarray, band: int) -> np.ndarray:
     n, m = cost.shape
     band = max(band, abs(n - m))
@@ -60,14 +66,14 @@ def _accumulate(cost: np.ndarray, band: int) -> np.ndarray:
 
 def dtw(a: np.ndarray, b: np.ndarray, band: int = 8) -> float:
     """Dynamic time warping distance with a Sakoe-Chiba band, normalised by n + m."""
-    acc = _accumulate(np.linalg.norm(a[:, None, :] - b[None, :, :], axis=-1), band)
+    acc = _accumulate(_cost(a, b), band)
     return float(acc[-1, -1] / (len(a) + len(b)))
 
 
 def dtw_path(a: np.ndarray, b: np.ndarray, band: int = 8) -> tuple[float, list[tuple[int, int]]]:
     """DTW distance and the alignment [(i, j), ...] from (0, 0) to (n-1, m-1).
     Backtracking prefers the diagonal, then (i-1, j), then (i, j-1) on ties, so ports agree exactly."""
-    acc = _accumulate(np.linalg.norm(a[:, None, :] - b[None, :, :], axis=-1), band)
+    acc = _accumulate(_cost(a, b), band)
     i, j = len(a), len(b)
     path = [(i - 1, j - 1)]
     while (i, j) != (1, 1):
@@ -81,7 +87,8 @@ def dtw_many(a: np.ndarray, bs: np.ndarray, band: int = 8) -> np.ndarray:
     """`dtw(a, b)` for every b in bs [B, m, D] at once (same result, vectorised over B). Used by calibration."""
     n, m = len(a), bs.shape[1]
     band = max(band, abs(n - m))
-    cost = np.linalg.norm(a[None, :, None, :] - bs[:, None, :, :], axis=-1)  # [B, n, m]
+    a, bs = np.asarray(a, np.float64), np.asarray(bs, np.float64)
+    cost = np.sqrt(((a[None, :, None, :] - bs[:, None, :, :]) ** 2).sum(-1))  # [B, n, m]
     acc = np.full((len(bs), n + 1, m + 1), np.inf)
     acc[:, 0, 0] = 0.0
     for i in range(1, n + 1):

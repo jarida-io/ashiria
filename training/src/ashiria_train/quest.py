@@ -66,12 +66,12 @@ def usable(tracked: bool, high_confidence: bool, inferred: bool, system_gesture:
     return bool(tracked and high_confidence and not inferred and not system_gesture)
 
 
-def frame(head_pos, head_rot, hands: dict, left_handed: bool, shoulder_width: float = DEFAULT_SHOULDER_WIDTH_M,
+def frame(head_pos, head_forward, hands: dict, left_handed: bool, shoulder_width: float = DEFAULT_SHOULDER_WIDTH_M,
           last_axes: np.ndarray | None = None):
-    """One canonical frame from one tick of tracking.
+    """One canonical frame from one tick of tracking. head_forward = head rotation × (0, 0, 1).
     hands = {"left"/"right": {"joints": [26,3], "tracked", "high_confidence", "inferred", "system_gesture"}}.
-    Returns (hand_rel [2,21,3], wrist_pos [2,3], present [2], axes) — reuse `axes` as last_axes next tick."""
-    R, ok = head_axes(rotate(head_rot, [0.0, 0.0, 1.0]))
+    Returns (hand_rel [2,21,3], wrist_pos [2,3], present [2], axes) — pass `axes` as last_axes next tick."""
+    R, ok = head_axes(np.asarray(head_forward, float))
     if not ok:
         R = last_axes if last_axes is not None else np.eye(3)
     hand_rel, wrist_pos, present = np.zeros((2, 21, 3)), np.zeros((2, 3)), np.zeros(2)

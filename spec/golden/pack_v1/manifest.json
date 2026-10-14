@@ -1,0 +1,124 @@
+{
+ "build": {
+  "created": "2026-01-01T00:00:00Z",
+  "dirty": null,
+  "git": null
+ },
+ "calibration": {
+  "attempts_per_sign": 6,
+  "method": "simulated",
+  "rates": {
+   "ambiguous_ok": 0.0,
+   "correct": 1.0,
+   "false_accept": 0.0,
+   "not_sure": 0.0,
+   "wrong": 0.0
+  }
+ },
+ "content_hash": "dfa6f17cbaae22b211b95e152549bf56fbd52c9fe39cb95f9b3fc0605ab8f788",
+ "distribution": "internal",
+ "engine": {
+  "active_fraction": 0.3,
+  "active_margin": 2,
+  "active_min_frames": 6,
+  "active_min_range": 0.3,
+  "dtw_band": 8,
+  "gap_fill_frames": 5,
+  "recognise": {
+   "accept_z": 1.15,
+   "min_margin_z": 0.0,
+   "min_present": 0.5,
+   "temperature": 0.05,
+   "top": 5
+  },
+  "runtime_version": 1,
+  "segmenter": {
+   "drop_s": 0.13,
+   "hold_radius": 0.12,
+   "hold_s": 0.6,
+   "hold_shape": 0.35,
+   "max_attempt_s": 4.0,
+   "min_attempt_s": 0.35,
+   "pre_roll_s": 0.2,
+   "rearm_move": 0.3,
+   "rest_height": -1.5,
+   "start_s": 0.1,
+   "tick_hz": 30.0
+  },
+  "seq_len": 32,
+  "trim_margin_frames": 2,
+  "verify": {
+   "dictionary_scale": 1.25,
+   "lenient": {
+    "distance_z": 1.6,
+    "finger": 0.5,
+    "finger_mean": false,
+    "location": 0.5,
+    "lookalike_guard": true,
+    "movement": 0.22,
+    "orientation_deg": 50.0,
+    "other_hand": 0.75,
+    "spread": 0.45
+   },
+   "lookalike_ratio": 0.9,
+   "min_present": 0.6,
+   "scored": {
+    "distance_z": 1.3,
+    "finger": 0.35,
+    "finger_mean": false,
+    "location": 0.35,
+    "lookalike_guard": true,
+    "movement": 0.15,
+    "orientation_deg": 35.0,
+    "other_hand": 0.5,
+    "spread": 0.3
+   },
+   "take_spread_cap": 2.0,
+   "take_spread_k": 2.5,
+   "thumb_scale": 1.4
+  },
+  "weights": {
+   "direction": 1.0,
+   "flexion": 1.0,
+   "palm_normal": 1.0,
+   "present": 1.0,
+   "spread": 1.0,
+   "tips": 0.5,
+   "wrist": 3.0
+  }
+ },
+ "files": {
+  "catalogue": {
+   "path": "catalogue.json",
+   "sha256": "06954c85c1a3be1a393f40916b9d5109fee0fb03da9a686b26cc37787b13c971"
+  },
+  "references": {
+   "path": "references.json",
+   "sha256": "32658fcba9b440cd355e2990896b57d0428f3b06c3ff624dfbda0fff26b43ab0"
+  }
+ },
+ "format": "ashiria.content-pack",
+ "format_version": 1,
+ "pack_id": "golden",
+ "rights": {
+  "ksl_dictionary": {
+   "permission": "none",
+   "reference": ""
+  },
+  "sources": [
+   "studio"
+  ],
+  "studio": {
+   "consent_form": ""
+  }
+ },
+ "runtime_version": 1,
+ "selfcheck": {
+  "descriptor_sum": 185.5013,
+  "sign_id": "flat",
+  "take": 0,
+  "tolerance": 0.01
+ },
+ "spec_version": 1,
+ "version": "1.0.0"
+}

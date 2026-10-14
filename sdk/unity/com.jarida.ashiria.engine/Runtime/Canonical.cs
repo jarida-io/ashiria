@@ -109,8 +109,10 @@ namespace Ashiria.Engine
         }
 
         /// <summary>Cut the rise from rest and the drop back: keep frames where the dominant wrist is above
-        /// <paramref name="fraction"/> of its own height range. Unchanged if the height range is under 0.3 shoulder widths.</summary>
-        public static Segment ActiveWindow(Segment seg, float fraction = 0.3f, int margin = 2, int minFrames = 6)
+        /// <paramref name="fraction"/> of its own height range. Unchanged if that range is under <paramref name="minRange"/>
+        /// shoulder widths.</summary>
+        public static Segment ActiveWindow(Segment seg, float fraction = 0.3f, int margin = 2, int minFrames = 6,
+                                           float minRange = 0.3f)
         {
             int n = seg.Length;
             int count = 0;
@@ -123,7 +125,7 @@ namespace Ashiria.Engine
                 lo = Math.Min(lo, y);
                 hi = Math.Max(hi, y);
             }
-            if (count < 3 || hi - lo < 0.3) return seg;
+            if (count < 3 || hi - lo < minRange) return seg;
             double threshold = lo + fraction * (hi - lo);
             int first = -1, last = -1;
             for (int t = 0; t < n; t++)
@@ -176,7 +178,7 @@ namespace Ashiria.Engine
             {
                 int k = 0;
                 for (int t = 0; t < n; t++) if (seg.Present[t, slot] > 0.5f) values[k++] = p[t, c];
-                centre[c] = Median(values);
+                centre[c] = Stats.Median(values);
             }
             for (int t = 0; t < n; t++)
             {
@@ -205,14 +207,6 @@ namespace Ashiria.Engine
                 }
             }
             return best >= 0 ? best : n / 2;
-        }
-
-        static double Median(double[] values)
-        {
-            var sorted = (double[])values.Clone();
-            Array.Sort(sorted);
-            int m = sorted.Length / 2;
-            return sorted.Length % 2 == 1 ? sorted[m] : 0.5 * (sorted[m - 1] + sorted[m]);
         }
 
         /// <summary>Resample to exactly <paramref name="n"/> frames: positions interpolate linearly (untracked frames

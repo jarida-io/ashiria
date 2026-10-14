@@ -34,13 +34,13 @@ namespace Ashiria.Engine.Tests
             for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
             {
                 string candidate = Path.Combine(dir.FullName, "spec", "golden", name);
-                if (File.Exists(candidate)) return candidate;
+                if (File.Exists(candidate) || Directory.Exists(candidate)) return candidate;
             }
             return Path.Combine("spec", "golden", name);
 #endif
         }
 
-        static Segment ToSegment(JToken s)
+        internal static Segment ToSegment(JToken s)
         {
             var hand = (JArray)s["hand_rel"];
             var wrist = (JArray)s["wrist_pos"];

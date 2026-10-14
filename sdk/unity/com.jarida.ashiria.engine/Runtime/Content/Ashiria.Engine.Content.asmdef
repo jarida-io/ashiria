@@ -1,0 +1,12 @@
+{
+  "name": "Ashiria.Engine.Content",
+  "rootNamespace": "Ashiria.Engine.Content",
+  "references": ["Ashiria.Engine"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": ["Newtonsoft.Json.dll"],
+  "autoReferenced": true,
+  "noEngineReferences": true
+}

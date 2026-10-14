@@ -94,8 +94,9 @@ def main(argv: list[str] | None = None) -> None:
         from .references import build_references
         build_references(cfg, args.vocab)
     elif args.step == "golden":
-        from .golden import build_golden
+        from .golden import build_golden, build_runtime_golden
         build_golden(cfg)
+        build_runtime_golden(cfg)
     elif args.step == "calibrate":
         from .calibrate import run_calibration
         run_calibration(cfg, args.pack, args.attempts, args.seed)
