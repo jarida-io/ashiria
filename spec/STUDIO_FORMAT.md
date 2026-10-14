@@ -1,6 +1,7 @@
 # Studio take format, v1
 
-Ashiria Studio (the internal Quest recorder) saves one JSON file per take. `ashiria import-studio` turns
+Ashiria Studio saves one JSON file per take. On the web app it is the development build opened with `?studio`
+(remembered until `?studio=off`): every attempt the segmenter cuts is saved automatically. `ashiria import-studio` turns
 takes into reference signs that replace the KSL Dictionary drafts, sign by sign.
 
 A take keeps **both** the raw tracking and the canonical frames the app computed:
@@ -13,10 +14,11 @@ A take keeps **both** the raw tracking and the canonical frames the app computed
 
 ## Where takes live
 
-- On the headset: `Application.persistentDataPath/studio/<session_id>/<sign_id>__<n>.json`. One file per
-  take, so a crash loses at most one take.
-- Pulled over USB into `training/data/studio/` (git-ignored). Takes are biometric data of identifiable
-  team members: they never go into git or any cloud service, and are deleted from the headset after import.
+- **Web app (development builds):** each take is sent to the dev server on the Mac over the local network and saved
+  in `training/data/studio/<date>/<sign_id>__<n>.json` (git-ignored). Nothing goes anywhere else.
+- **Unity (fallback):** `Application.persistentDataPath/studio/<session_id>/`, pulled over USB into
+  `training/data/studio/`.
+- **Either way:** takes are biometric data of identifiable team members. They never go into git or any cloud service.
 
 ## File
 

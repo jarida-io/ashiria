@@ -31,8 +31,19 @@ function save(key: string, value: unknown): void {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* private mode: keep in memory */ }
 }
 
-/** Studio is a development tool: only in dev builds, and only with ?studio in the URL. */
-export const STUDIO_ENABLED = import.meta.env.DEV && new URLSearchParams(location.search).has('studio');
+/** Studio is a development tool: only in dev builds, switched on with ?studio in the URL (remembered on this
+ * device until ?studio=off). */
+function studioSwitch(): boolean {
+  if (!import.meta.env.DEV) return false;
+  const q = new URLSearchParams(location.search).get('studio');
+  try {
+    if (q !== null) localStorage.setItem('ashiria.studio', q === 'off' ? '0' : '1');
+    return localStorage.getItem('ashiria.studio') === '1';
+  } catch {
+    return q !== null && q !== 'off';
+  }
+}
+export const STUDIO_ENABLED = studioSwitch();
 
 class AppState {
   pack: ContentPack | null = null;
