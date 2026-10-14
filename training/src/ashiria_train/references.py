@@ -45,6 +45,25 @@ def names_of(row: pd.Series) -> set[str]:
     return {str(row["label"]).lower()} | {a.strip().lower() for a in aliases.split(";") if a.strip()}
 
 
+def choose_clip(word: str, names: dict[str, set[str]], labels: dict[str, str]) -> str | None:
+    """The dictionary clip for a vocabulary word. Prefer the clip *labelled* with the word, then one listing it as an
+    alias (other signs share glosses: "thank you" is also an alias of "gratitude"), then the lowest-numbered
+    variant ("i" -> "i 1", not "i 2", which is "me"). Ties keep manifest order."""
+    exact = [c for c, label in labels.items() if label == word]
+    if exact:
+        return exact[0]
+    alias = [c for c, n in names.items() if word in n]
+    if alias:
+        return alias[0]
+    variant = re.compile(re.escape(word) + r" (\d+)")
+    numbered = []
+    for c, label in labels.items():
+        m = variant.fullmatch(label) or next((variant.fullmatch(n) for n in names[c] if variant.fullmatch(n)), None)
+        if m:
+            numbered.append((int(m.group(1)), variant.fullmatch(label) is None, c))
+    return min(numbered)[2] if numbered else None
+
+
 HOLD_SHARE = 0.5          # static if at least this share of the active window is a hold
 OTHER_HAND_EXTENT = 0.2   # shoulder widths: the other hand counts as signing if it moves this much...
 SHAPE_CHANGE = 0.35       # radians: 90th-percentile bend deviation (mean over 15 joints) during the hold
@@ -128,15 +147,13 @@ def build_references(cfg: Config, vocab_file: str | Path | None = None) -> Path:
         return out
     by_clip = manifest.set_index("clip_id")
     signs, missing, descriptors = [], [], []
+    names = {c: names_of(by_clip.loc[c]) for c in segments}
+    labels = {c: str(by_clip.loc[c]["label"]).lower() for c in segments}
     for word in load_vocabulary(vocab_file):
-        hits = [c for c in segments if word in names_of(by_clip.loc[c])]
-        if not hits:  # fall back to a numbered variant: "mother" -> "mother 1"
-            variant = re.compile(re.escape(word) + r" \d+")
-            hits = sorted(c for c in segments if any(variant.fullmatch(n) for n in names_of(by_clip.loc[c])))
-        if not hits:
+        clip = choose_clip(word, names, labels)
+        if clip is None:
             missing.append(word)
             continue
-        clip = hits[0]
         row = by_clip.loc[clip]
         seg = cut_reference(segments[clip], p, f.rest_height)
         key = steadiest_frame(seg)

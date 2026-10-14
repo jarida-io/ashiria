@@ -149,12 +149,13 @@ signs:
   aliases: []
   unit: spell-your-name
   order: 9
-  tier: watch
-  tier_note: 'not in the KSL Dictionary: recorded by Jerry (team video or Studio), else watch-only'
+  tier: auto
+  tier_note: ''
   hint: ''
   facial_grammar: false
   recognise: null
-  sources: {}
+  sources:
+    dictionary: i
   review:
     status: draft
     by: null
@@ -164,12 +165,13 @@ signs:
   aliases: []
   unit: spell-your-name
   order: 10
-  tier: watch
-  tier_note: 'not in the KSL Dictionary: recorded by Jerry (team video or Studio), else watch-only'
+  tier: auto
+  tier_note: ''
   hint: ''
   facial_grammar: false
   recognise: null
-  sources: {}
+  sources:
+    dictionary: j
   review:
     status: draft
     by: null

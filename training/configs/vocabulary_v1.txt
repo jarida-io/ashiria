@@ -2,7 +2,7 @@
 # A word matches a dictionary sign's name or any of its aliases; "mother" also finds "mother 1".
 # References are derived, with the owners' permission, from the KSL Dictionary (content/rights.yaml).
 
-# Unit 1: spell your name (the dictionary has 24 letters; I and J are recorded by Jerry or stay watch-only)
+# Unit 1: spell your name (I and J are in the dictionary under "General": "I 1" and "J")
 a
 b
 c

@@ -134,3 +134,15 @@ def test_forbidden_fields_and_release_rules(pack, tmp_path):
     shipped = [s["id"] for s in json.loads((out / "catalogue.json").read_text())["signs"]]
     assert "flat" not in shipped and len(shipped) == len(sources) - 1
     assert json.loads((out / "manifest.json").read_text())["distribution"] == "release"
+
+
+def test_dictionary_clip_choice_prefers_label_then_alias_then_lowest_variant():
+    from ashiria_train.references import choose_clip
+    labels = {"g": "gratitude", "t": "thank you", "i2": "i 2", "i1": "i 1", "f3": "father 3", "f1": "father 1"}
+    names = {"g": {"gratitude", "thank you"}, "t": {"thank you"}, "i2": {"i 2", "me"}, "i1": {"i 1"},
+             "f3": {"father 3"}, "f1": {"father 1", "father 2"}}
+    assert choose_clip("thank you", names, labels) == "t"      # the clip labelled with the word, not an alias
+    assert choose_clip("i", names, labels) == "i1"             # lowest variant, whatever the clip order
+    assert choose_clip("father", names, labels) == "f1"
+    assert choose_clip("me", names, labels) == "i2"            # aliases still work
+    assert choose_clip("nothing", names, labels) is None
