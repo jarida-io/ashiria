@@ -2,36 +2,63 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Ashiria sign browser</title>
 <style>
-  :root { --bg: #f6f7f8; --card: #fff; --ink: #1d1d1f; --muted: #6b6f76; --line: #e3e5e8; --sel: #e6f6fa; --accent: #0b6e8a; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #111315; --card: #1b1e21; --ink: #eef0f2; --muted: #9aa0a6; --line: #2b2f33; --sel: #12323b; --accent: #4fd1e8; } }
+  :root { --bg: #f6f7f8; --card: #fff; --ink: #1d1d1f; --muted: #6b6f76; --line: #e3e5e8; --sel: #e6f6fa; --accent: #0b6e8a; --v1: #1f8a4c; --warn: #8a6d1f; --stage: #0d1b22; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111315; --card: #1b1e21; --ink: #eef0f2; --muted: #9aa0a6; --line: #2b2f33; --sel: #12323b; --accent: #4fd1e8; --v1: #5fd38d; --warn: #e0c060; } }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 -apple-system, system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
-  header { padding: 12px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, system-ui, sans-serif; display: flex; flex-direction: column; }
+  header { padding: 10px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 6px 14px; align-items: baseline; flex-wrap: wrap; }
   h1 { font-size: 17px; margin: 0; }
   a { color: var(--accent); }
   .muted { color: var(--muted); }
-  .wrap { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+  .note { font-size: 12px; }
+  .wrap { flex: 1; display: grid; grid-template-columns: 320px 1fr; min-height: 0; }
   aside { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
-  .filters { padding: 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--line); }
-  input, select { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
-  ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
-  li { padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .filters { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--line); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=search], select { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); min-width: 0; }
+  input[type=search] { width: 100%; }
+  ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+  li { padding: 9px 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
   li:hover { background: var(--sel); }
   li.on { background: var(--sel); font-weight: 600; }
-  li small { display: block; color: var(--muted); font-weight: 400; }
-  main { padding: 16px 20px; overflow-y: auto; }
-  .stage { position: relative; max-width: 720px; background: #000; border-radius: 10px; overflow: hidden; }
-  .stage video { width: 100%; display: block; }
+  li small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+  .chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; border: 1px solid currentColor; margin-left: 6px; vertical-align: 1px; }
+  .chip.v1 { color: var(--v1); } .chip.var { color: var(--muted); } .chip.none { color: var(--warn); }
+  main { padding: 14px 18px 40px; overflow-y: auto; min-width: 0; }
+  .back { display: none; }
+  .sign { font-size: 26px; font-weight: 700; margin: 0; }
+  .media { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-width: 980px; margin-top: 10px; }
+  .stage { position: relative; background: #000; border-radius: 10px; overflow: hidden; aspect-ratio: 4 / 3; }
+  .stage video { width: 100%; height: 100%; display: block; object-fit: contain; }
   .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-  .controls { display: flex; gap: 14px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+  .stage.ref { background: var(--stage); }
+  .cap { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .controls { display: flex; gap: 8px 16px; align-items: center; margin: 12px 0 4px; flex-wrap: wrap; }
   label { display: flex; gap: 6px; align-items: center; }
-  .sign { font-size: 24px; font-weight: 700; margin: 0 0 4px; }
-  .desc { max-width: 720px; }
+  .desc { max-width: 70ch; margin: 12px 0 0; }
   .legend span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 4px 0 10px; }
   .empty { color: var(--muted); padding: 40px 0; }
+  .missing { aspect-ratio: 4 / 3; border: 1px dashed var(--line); border-radius: 10px; display: grid; place-items: center; text-align: center; padding: 16px; color: var(--muted); }
+  .links button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  .more { padding: 14px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  /* Phone: the list and the sign take turns filling the screen; the back button (and the phone's own Back) returns to the list. */
+  @media (max-width: 760px) {
+    header .note { display: none; }
+    .wrap { grid-template-columns: 1fr; }
+    aside { border-right: 0; }
+    main { display: none; padding: 0 16px 40px; }
+    body.detail aside { display: none; }
+    body.detail main { display: block; }
+    .back { display: flex; position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 10px 0; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+    .back button { font: inherit; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 4px 0; cursor: pointer; }
+    .media { grid-template-columns: 1fr; }
+    .sign { font-size: 24px; }
+  }
 </style>
 </head>
 <body>
@@ -39,13 +66,16 @@
   <h1>Sign browser</h1>
   <span class="muted" id="count">Loading...</span>
   <a href="/dev/study/">Study sheet (v1 signs)</a>
-  <span class="muted">Development only: the dictionary videos and landmarks never leave this Mac.</span>
+  <span class="muted note">Development only: the dictionary videos and landmarks never leave this Mac.</span>
 </header>
 <div class="wrap">
   <aside>
     <div class="filters">
-      <input id="q" type="search" placeholder="Search signs or aliases" autofocus />
-      <select id="cat"><option value="">All categories</option></select>
+      <input id="q" type="search" placeholder="Search signs" autocomplete="off" />
+      <div class="row">
+        <select id="cat"><option value="">All categories</option></select>
+        <label><input type="checkbox" id="v1only" /> Ashiria v1</label>
+      </div>
     </div>
     <ul id="list"></ul>
   </aside>
@@ -57,50 +87,78 @@ const HAND_BONES = FINGERS.flatMap((c) => [[0, c[0]], [c[0], c[1]], [c[1], c[2]]
 // MediaPipe pose, upper body: shoulders, elbows, wrists, and the face outline points.
 const POSE_BONES = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [9, 10], [0, 7], [0, 8]];
 const COLORS = ['#4fd1e8', '#b49cff'];
-let index = [], shown = [], current = null, raf = 0;
+const SW = 0.38;   // reference wrist positions are in shoulder widths
+const PAGE = 250;
+let index = [], shown = [], listed = 0, current = null, raf = 0;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const narrow = () => matchMedia('(max-width: 760px)').matches;
+
+function item(x, i) {
+  const chips = (x.variant ? `<span class="chip var">video ${esc(x.variant)}</span>` : '') +
+    (x.v1 ? '<span class="chip v1">v1</span>' : '') + (x.clip_id ? '' : '<span class="chip none">no video</span>');
+  const also = x.same_video.length ? ' - also: ' + esc(x.same_video.join(', ')) : '';
+  return `<li data-i="${i}" class="${current === x ? 'on' : ''}">${esc(x.sign)}${chips}<small>${esc(x.category)}${also}</small></li>`;
+}
+
+function listMore() {
+  const next = shown.slice(listed, listed + PAGE);
+  $('list').querySelector('.more')?.remove();
+  $('list').insertAdjacentHTML('beforeend', next.map((x, k) => item(x, listed + k)).join(''));
+  listed += next.length;
+  if (listed < shown.length) $('list').insertAdjacentHTML('beforeend', `<li class="more">Showing ${listed} of ${shown.length}. Scroll for more.</li>`);
+}
 
 function filter() {
-  const q = $('q').value.trim().toLowerCase(), cat = $('cat').value;
-  shown = index.filter((x) => (!cat || x.category === cat) && (!q || x.sign.toLowerCase().includes(q) || x.aliases.toLowerCase().includes(q)));
-  $('list').innerHTML = shown.slice(0, 600).map((x, i) =>
-    `<li data-i="${i}" class="${current && current.clip_id === x.clip_id ? 'on' : ''}">${esc(x.sign)}<small>${esc(x.category)}${x.aliases ? ' - ' + esc(x.aliases) : ''}</small></li>`).join('');
-  $('count').textContent = `${shown.length} of ${index.length} signs${shown.length > 600 ? ' (first 600 listed; refine the search)' : ''}`;
+  const q = $('q').value.trim().toLowerCase(), cat = $('cat').value, v1 = $('v1only').checked;
+  shown = index.filter((x) => (!cat || x.category === cat) && (!v1 || x.v1) &&
+    (!q || x.sign.toLowerCase().includes(q) || x.same_video.some((n) => n.toLowerCase().includes(q))));
+  if (q) shown.sort((a, b) => (b.sign.toLowerCase().startsWith(q) - a.sign.toLowerCase().startsWith(q)));
+  $('list').innerHTML = ''; $('list').scrollTop = 0; listed = 0;
+  listMore();
+  const withVideo = index.filter((x) => x.clip_id).length;
+  $('count').textContent = shown.length === index.length
+    ? `${index.length} signs from the data sheet, ${withVideo} with video`
+    : `${shown.length} of ${index.length} signs`;
 }
 
-async function open(x) {
-  current = x;
-  cancelAnimationFrame(raf);
-  document.querySelectorAll('li').forEach((li) => li.classList.toggle('on', shown[+li.dataset.i]?.clip_id === x.clip_id));
-  $('main').innerHTML = `
-    <div class="sign">${esc(x.sign)}</div>
-    <div class="muted">${esc(x.category)}${x.aliases ? ' - also: ' + esc(x.aliases) : ''}</div>
-    <div class="controls">
-      <label><input type="checkbox" id="hands" checked /> Hands</label>
-      <label><input type="checkbox" id="body" checked /> Body</label>
-      <label><input type="checkbox" id="dots" /> Joint numbers</label>
-      <label>Speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option></select></label>
-      <span class="legend"><span style="background:${COLORS[0]}"></span>signer's right<span style="background:${COLORS[1]}"></span>left</span>
-      <span class="muted" id="rate"></span>
-    </div>
-    <div class="stage"><video id="video" src="/dev/study/clip/${x.clip_id}" muted loop autoplay playsinline controls></video><canvas id="overlay"></canvas></div>
-    <p class="desc">${esc(x.description)}</p>`;
-  $('speed').addEventListener('change', () => ($('video').playbackRate = +$('speed').value));
-  const res = await fetch(`/dev/study/landmarks/${x.clip_id}`);
-  if (!res.ok) { $('rate').textContent = 'Could not load landmarks'; return; }
-  const lm = await res.json();
-  if (current !== x) return;
-  const n = lm.hand_present.length;
-  const pct = (slot) => Math.round((100 * lm.hand_present.filter((p) => p[slot]).length) / Math.max(n, 1));
-  $('rate').textContent = `${n} frames at ${lm.fps.toFixed(0)} fps - right hand found in ${pct(0)}%, left in ${pct(1)}%`;
-  draw(lm);
+/** Joint j of a reference at frame t, in metres, x mirrored so it faces you like the video. */
+function joint(take, t, slot, j) {
+  const wo = (t * 2 + slot) * 3, o = ((t * 2 + slot) * 21 + j) * 3;
+  return [-(take.wrist_pos[wo] * SW + take.hand_rel[o]), take.wrist_pos[wo + 1] * SW + take.hand_rel[o + 1]];
 }
 
-function draw(lm) {
-  const video = $('video'), canvas = $('overlay');
-  if (!video || !canvas) return;
+function fit(take, w, h) {
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (let t = 0; t < take.frames; t++)
+    for (let slot = 0; slot < 2; slot++) {
+      if (take.present[t * 2 + slot] < 0.5) continue;
+      for (let j = 0; j < 21; j++) {
+        const [x, y] = joint(take, t, slot, j);
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+    }
+  return { scale: 0.85 * Math.min(w / Math.max(x1 - x0, 0.05), h / Math.max(y1 - y0, 0.05)), mx: (x0 + x1) / 2, my: (y0 + y1) / 2 };
+}
+
+function drawReference(canvas, take, t) {
+  const ctx = canvas.getContext('2d');
+  const w = (canvas.width = canvas.clientWidth * devicePixelRatio), h = (canvas.height = canvas.clientHeight * devicePixelRatio);
+  ctx.clearRect(0, 0, w, h);
+  if (!take.view || take.view.w !== w) take.view = { ...fit(take, w, h), w };
+  const { scale, mx, my } = take.view;
+  for (let slot = 0; slot < 2; slot++) {
+    if (take.present[t * 2 + slot] < 0.5) continue;
+    const pt = (j) => { const [x, y] = joint(take, t, slot, j); return [w / 2 + (x - mx) * scale, h / 2 - (y - my) * scale]; };
+    ctx.strokeStyle = ctx.fillStyle = COLORS[slot];
+    ctx.lineWidth = 2.5 * devicePixelRatio; ctx.lineCap = 'round';
+    for (const [a, b] of HAND_BONES) { const p = pt(a), q = pt(b); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); }
+    for (let j = 0; j < 21; j++) { const p = pt(j); ctx.beginPath(); ctx.arc(p[0], p[1], (j % 4 === 0 && j ? 3.4 : 2.4) * devicePixelRatio, 0, 7); ctx.fill(); }
+  }
+}
+
+function drawLandmarks(canvas, video, lm) {
   const ctx = canvas.getContext('2d');
   const w = (canvas.width = canvas.clientWidth * devicePixelRatio), h = (canvas.height = canvas.clientHeight * devicePixelRatio);
   ctx.clearRect(0, 0, w, h);
@@ -113,32 +171,110 @@ function draw(lm) {
     }
   };
   if ($('body').checked && lm.pose_present[k]) line(lm.pose[k], POSE_BONES, 'rgba(255,255,255,0.55)', 2);
-  if ($('hands').checked) {
-    for (let s = 0; s < 2; s++) {
-      if (!lm.hand_present[k][s]) continue;
-      const pts = lm.hand[k][s];
-      line(pts, HAND_BONES, COLORS[s], 2.5);
-      ctx.fillStyle = COLORS[s];
-      pts.forEach(([x, y], j) => {
-        ctx.beginPath(); ctx.arc(x * w, y * h, (j % 4 === 0 && j ? 3.5 : 2.5) * devicePixelRatio, 0, 7); ctx.fill();
-        if ($('dots').checked) { ctx.font = `${10 * devicePixelRatio}px system-ui`; ctx.fillText(String(j), x * w + 4, y * h - 4); }
-      });
-    }
+  if (!$('hands').checked) return;
+  for (let s = 0; s < 2; s++) {
+    if (!lm.hand_present[k][s]) continue;
+    const pts = lm.hand[k][s];
+    line(pts, HAND_BONES, COLORS[s], 2.5);
+    ctx.fillStyle = COLORS[s];
+    pts.forEach(([x, y], j) => {
+      ctx.beginPath(); ctx.arc(x * w, y * h, (j % 4 === 0 && j ? 3.5 : 2.5) * devicePixelRatio, 0, 7); ctx.fill();
+      if ($('dots').checked) { ctx.font = `${10 * devicePixelRatio}px system-ui`; ctx.fillText(String(j), x * w + 4, y * h - 4); }
+    });
   }
-  raf = requestAnimationFrame(() => draw(lm));
 }
+
+async function open(x, push = true) {
+  current = x;
+  cancelAnimationFrame(raf);
+  document.querySelectorAll('#list li[data-i]').forEach((li) => li.classList.toggle('on', shown[+li.dataset.i] === x));
+  if (narrow()) {
+    if (push && !document.body.classList.contains('detail')) history.pushState({ detail: true }, '');
+    document.body.classList.add('detail');
+  }
+  const sameVideo = x.same_video.length
+    ? `<div class="muted links">Same video as: ${x.same_video.map((n) => `<button data-name="${esc(n)}">${esc(n)}</button>`).join(', ')}</div>` : '';
+  const media = x.clip_id ? `
+    <div class="controls">
+      <label><input type="checkbox" id="hands" checked /> Hands</label>
+      <label><input type="checkbox" id="body" checked /> Body</label>
+      <label><input type="checkbox" id="dots" /> Joint numbers</label>
+      <label>Speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option></select></label>
+    </div>
+    <div class="media">
+      <div><div class="stage"><video id="video" src="/dev/study/clip/${x.clip_id}" muted loop autoplay playsinline controls></video><canvas id="overlay"></canvas></div>
+        <div class="cap">Dictionary video with MediaPipe landmarks. <span class="legend"><span style="background:${COLORS[0]}"></span>signer's right<span style="background:${COLORS[1]}"></span>left</span></div></div>
+      <div><div class="stage ref"><canvas id="ref"></canvas></div>
+        <div class="cap" id="refcap">Reference hands Ashiria would cut from this clip, facing you like the video.</div></div>
+    </div>
+    <div class="cap" id="rate"></div>`
+    : '<div class="media"><div class="missing">The scrape has no usable copy of this video (missing, or a broken download).</div></div>';
+  $('main').innerHTML = `
+    <div class="back"><button id="back">&lsaquo; All signs</button></div>
+    <h2 class="sign">${esc(x.sign)}${x.variant ? `<span class="chip var">video ${esc(x.variant)}</span>` : ''}${x.v1 ? '<span class="chip v1">in Ashiria v1</span>' : ''}</h2>
+    <div class="muted">${esc(x.category)}</div>
+    ${sameVideo}
+    ${media}
+    ${x.description ? `<p class="desc">${esc(x.description)}</p>` : ''}
+    ${x.note ? `<p class="desc muted">Note: ${esc(x.note)}</p>` : ''}`;
+  $('main').scrollTop = 0;
+  $('back').addEventListener('click', () => history.back());
+  $('main').querySelectorAll('[data-name]').forEach((b) => b.addEventListener('click', () => {
+    const y = index.find((e) => e.sign === b.dataset.name && e.clip_id === x.clip_id) || index.find((e) => e.sign === b.dataset.name);
+    if (y) open(y, false);
+  }));
+  if (!x.clip_id) return;
+  $('speed').addEventListener('change', () => ($('video').playbackRate = +$('speed').value));
+  const [lmRes, refRes] = await Promise.all([fetch(`/dev/study/landmarks/${x.clip_id}`), fetch(`/dev/study/reference/${x.clip_id}`)]);
+  if (current !== x) return;
+  const lm = lmRes.ok ? await lmRes.json() : null;
+  const ref = refRes.ok ? await refRes.json() : null;
+  if (current !== x) return;
+  if (lm) {
+    const n = lm.hand_present.length;
+    const pct = (slot) => Math.round((100 * lm.hand_present.filter((p) => p[slot]).length) / Math.max(n, 1));
+    $('rate').textContent = `${n} frames at ${lm.fps.toFixed(0)} fps. MediaPipe found the right hand in ${pct(0)}% of frames, the left in ${pct(1)}%.`;
+  } else $('rate').textContent = 'Could not load the landmarks.';
+  if (!ref) $('refcap').textContent = 'No reference: MediaPipe did not find a clear enough hand in this clip.';
+  const t0 = performance.now();
+  const tick = (now) => {
+    const video = $('video');
+    if (!video || current !== x) return;
+    if (lm) drawLandmarks($('overlay'), video, lm);
+    if (ref) {
+      const speed = +$('speed').value, period = (ref.frames - 1) / ref.fps + 0.8;
+      const t = Math.min(ref.frames - 1, Math.floor((((now - t0) / 1000 * speed) % period) * ref.fps));
+      drawReference($('ref'), ref, t);
+    }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+
+function closeDetail() {
+  document.body.classList.remove('detail');
+  cancelAnimationFrame(raf);
+  $('main').querySelector('video')?.pause();
+}
+
+addEventListener('popstate', closeDetail);
 
 fetch('/dev/study/index.json').then((r) => (r.ok ? r.json() : r.text().then((t) => Promise.reject(t)))).then((d) => {
   index = d;
   [...new Set(d.map((x) => x.category).filter(Boolean))].sort().forEach((c) => $('cat').insertAdjacentHTML('beforeend', `<option>${esc(c)}</option>`));
   filter();
   const wanted = new URLSearchParams(location.search).get('sign');
-  const first = wanted ? d.find((x) => x.sign.toLowerCase() === wanted.toLowerCase()) : null;
+  const first = wanted ? d.find((x) => x.sign.toLowerCase() === wanted.toLowerCase() && x.clip_id) : null;
   if (first) open(first);
 }, (err) => { $('count').textContent = 'Could not load: ' + err; });
 $('q').addEventListener('input', filter);
 $('cat').addEventListener('change', filter);
-$('list').addEventListener('click', (e) => { const li = e.target.closest('li'); if (li) open(shown[+li.dataset.i]); });
+$('v1only').addEventListener('change', filter);
+$('list').addEventListener('click', (e) => { const li = e.target.closest('li[data-i]'); if (li) open(shown[+li.dataset.i]); });
+$('list').addEventListener('scroll', () => {
+  const l = $('list');
+  if (listed < shown.length && l.scrollTop + l.clientHeight > l.scrollHeight - 400) listMore();
+});
 </script>
 </body>
 </html>

@@ -2,6 +2,8 @@
 
 For each catalogue sign: its review status and tier, the local KSL Dictionary video it came from (development
 machine only; never served by the app), and the reference take as plain joint positions for a preview.
+`ashiria study-index`, `study-landmarks` and `study-reference` feed the sign browser (/dev/study/browse): every sign
+in the dictionary's data sheet, with MediaPipe landmarks and the reference Ashiria would cut from it.
 """
 
 from __future__ import annotations
@@ -68,22 +70,83 @@ def video_roots() -> list[Path]:
 
 
 def dictionary_index() -> list[dict]:
-    """Every extracted KSL Dictionary clip for the dev-only sign browser: id, sign, aliases, category, description."""
+    """Every sign in the KSL Dictionary data sheet, for the dev-only sign browser.
+
+    One entry per sign name and video: names that share a video each get their own entry (with `same_video` listing
+    the others), and a name with several videos gets one entry per video. `clip_id` is None when the scrape has no
+    usable copy of the video (missing or a broken download).
+    """
     dcfg = load_config(DICTIONARY_CONFIG)
-    manifest = path(dcfg, "manifests") / "videos.csv"
-    landmarks = path(dcfg, "landmarks")
-    if not manifest.exists():
+    manifest, sheet = path(dcfg, "manifests") / "videos.csv", training_relative(dcfg.dictionary["source_csv"])
+    if not manifest.exists() or not sheet.exists():
         return []
-    df = pd.read_csv(manifest, dtype=str).fillna("")
-    raw = path(dcfg, "raw_videos")
+    landmarks, raw = path(dcfg, "landmarks"), path(dcfg, "raw_videos")
+    m = pd.read_csv(manifest, dtype=str).fillna("")
+    # `ashiria import-dictionary` keeps one clip per video, numbered by the video's first listing in the sheet.
+    clip_by_number = {r["number"]: r for _, r in m[m["label"] != ""].iterrows()}
+    v1 = {c: w for w, c in _v1_clips().items()}
+
+    df = pd.read_csv(sheet, dtype=str).fillna("")
+    df = df[df["sign"].str.strip() != ""].copy()
+    df["n"] = pd.to_numeric(df["number"], errors="coerce").fillna(10**9).astype(int)
+    df = df.sort_values("n")
     out = []
-    for _, r in df.iterrows():
-        if not (landmarks / f"{r['clip_id']}.npz").exists() or not (raw / r["path"]).exists():
-            continue
-        out.append({"clip_id": r["clip_id"], "sign": r["label"], "aliases": r.get("aliases", ""),
-                    "category": r.get("category", ""), "description": r.get("description", ""),
-                    "video": str((raw / r["path"]).resolve())})
-    return sorted(out, key=lambda x: x["sign"])
+    for src, group in df.groupby("video_src", sort=False):
+        clip = clip_by_number.get(str(group["n"].iloc[0])) if src else None
+        ok = clip is not None and (landmarks / f"{clip['clip_id']}.npz").exists() and (raw / clip["path"]).exists()
+        names = list(dict.fromkeys(s.strip() for s in group["sign"]))
+        for name in names:
+            rows = group[group["sign"].str.strip() == name]
+            out.append({
+                "sign": name, "category": rows["category"].mode().iloc[0] if len(rows) else "",
+                "description": next((d for d in rows["description"] if d), "") or next((d for d in group["description"] if d), ""),
+                "note": next((x for x in rows["note"] if x), ""),
+                "same_video": [x for x in names if x != name],
+                "clip_id": clip["clip_id"] if ok else None,
+                "video": str((raw / clip["path"]).resolve()) if ok else None,
+                "v1": v1.get(clip["clip_id"]) if ok else None,
+            })
+    # Number the videos of names that have more than one, so the list can tell them apart.
+    count: dict[str, int] = {}
+    for e in out:
+        count[e["sign"].lower()] = count.get(e["sign"].lower(), 0) + 1
+    seen: dict[str, int] = {}
+    for e in sorted(out, key=lambda e: (e["clip_id"] is None, e["sign"].lower())):
+        k = e["sign"].lower()
+        seen[k] = seen.get(k, 0) + 1
+        e["variant"] = f"{seen[k]} of {count[k]}" if count[k] > 1 else ""
+    return sorted(out, key=lambda e: (e["sign"].lower(), e["variant"]))
+
+
+def _v1_clips() -> dict[str, str]:
+    """v1 vocabulary word -> the dictionary clip its reference came from."""
+    refs_file = training_relative(DICTIONARY)
+    if not refs_file.exists():
+        return {}
+    return {s["word"]: s["clip_id"] for s in json.loads(refs_file.read_text())["signs"]}
+
+
+def clip_reference(clip_id: str) -> dict | None:
+    """One dictionary clip cut into a reference the way Ashiria cuts every reference (segmenter, then prepare), as
+    plain joint positions for the browser's preview. None if the clip has no usable hand."""
+    from .canonical import from_mediapipe, gap_fill, trim
+    from .params import EngineParams
+    from .pipeline import cut_reference
+
+    if not clip_id.isalnum():
+        raise ValueError("bad clip id")
+    dcfg = load_config(DICTIONARY_CONFIG)
+    with np.load(path(dcfg, "landmarks") / f"{clip_id}.npz") as d:
+        seg, _ = from_mediapipe(d)
+    f = dcfg.features
+    if seg is not None:
+        seg = trim(gap_fill(seg, f.gap_fill_frames), f.rest_height, f.trim_margin_frames)
+    ref = cut_reference(seg, EngineParams.from_config(dcfg), f.rest_height) if seg is not None and len(seg) >= 4 else None
+    if ref is None:
+        return None
+    return {"fps": round(float(ref.fps), 3), "frames": len(ref), "two_handed": bool(ref.present[:, 1].mean() > 0.3),
+            "hand_rel": np.round(ref.hand_rel, 4).ravel().tolist(), "wrist_pos": np.round(ref.wrist_pos, 3).ravel().tolist(),
+            "present": ref.present.ravel().tolist()}
 
 
 def clip_landmarks(clip_id: str) -> dict:

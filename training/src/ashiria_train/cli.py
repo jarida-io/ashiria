@@ -60,7 +60,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--pack", default="ksl-core")
     p = steps.add_parser("study-data", help="JSON for the dev-only study sheet (catalogue, reviews, videos, previews)")
     p.add_argument("--pack", default="ksl-core")
-    steps.add_parser("study-index", help="JSON index of every extracted dictionary clip (dev-only sign browser)")
+    steps.add_parser("study-index", help="JSON index of every sign in the dictionary data sheet (dev-only sign browser)")
+    p = steps.add_parser("study-reference", help="JSON reference hands cut from one dictionary clip")
+    p.add_argument("clip_id")
     p = steps.add_parser("study-landmarks", help="JSON MediaPipe image landmarks of one dictionary clip")
     p.add_argument("clip_id")
     p = steps.add_parser("embed", help="experiment: sign embedding over all dictionary signs, compared with DTW")
@@ -138,6 +140,10 @@ def main(argv: list[str] | None = None) -> None:
         import json as _json
         from .study import clip_landmarks
         print(_json.dumps(clip_landmarks(args.clip_id)))
+    elif args.step == "study-reference":
+        import json as _json
+        from .study import clip_reference
+        print(_json.dumps(clip_reference(args.clip_id)))
     elif args.step == "embed":
         from .embed import run_embed
         run_embed(cfg, epochs=args.epochs, attempts=args.attempts)

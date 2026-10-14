@@ -7,8 +7,9 @@
  *   into the app.
  * - POST /dev/studio: saves a Studio take (spec/STUDIO_FORMAT.md) to ../../training/data/studio/<session>/.
  * - /dev/study: the study sheet (dev/study.html): each sign's local dictionary video next to its reference hands,
- *   with Approve / Reject buttons that run `ashiria approve`. /dev/study/browse: every extracted dictionary sign
- *   with MediaPipe's landmarks drawn over its video. The videos never leave this Mac.
+ *   with Approve / Reject buttons that run `ashiria approve`. /dev/study/browse: every sign in the dictionary's data
+ *   sheet, with MediaPipe's landmarks drawn over its video and the reference Ashiria would cut from it. The videos
+ *   never leave this Mac.
  *
  * Production builds only bundle packs from public/packs/, and refuse any that is not a release pack
  * (`ashiria pack --release`: Studio-recorded, approved signs only).
@@ -103,6 +104,7 @@ export function ashiriaDev(): Plugin {
       let clips = new Map<string, string>();
       let indexText = '';
       const landmarkCache = new Map<string, string>();
+      const referenceCache = new Map<string, string>();
       server.middlewares.use('/dev/study', async (req, res) => {
         const url = (req.url ?? '/').split('?')[0];
         try {
@@ -111,7 +113,8 @@ export function ashiriaDev(): Plugin {
           if (url === '/index.json') {
             if (!indexText) {
               indexText = await ashiria(['study-index']);
-              clips = new Map((JSON.parse(indexText) as { clip_id: string; video: string }[]).map((c) => [c.clip_id, c.video]));
+              const entries = JSON.parse(indexText) as { clip_id: string | null; video: string | null }[];
+              clips = new Map(entries.filter((c) => c.clip_id && c.video).map((c) => [c.clip_id as string, c.video as string]));
             }
             return send(res, 200, indexText);
           }
@@ -122,6 +125,15 @@ export function ashiriaDev(): Plugin {
               landmarkCache.set(lm[1], await ashiria(['study-landmarks', lm[1]]));
             }
             return send(res, 200, landmarkCache.get(lm[1]) as string);
+          }
+          const ref = /^\/reference\/([a-f0-9]+)$/.exec(url);
+          if (ref) {
+            if (!referenceCache.has(ref[1])) {
+              if (referenceCache.size > 200) referenceCache.clear();
+              referenceCache.set(ref[1], await ashiria(['study-reference', ref[1]]));
+            }
+            const text = referenceCache.get(ref[1]) as string;
+            return text.trim() === 'null' ? send(res, 404, { error: 'no reference' }) : send(res, 200, text);
           }
           const clip = /^\/clip\/([a-f0-9]+)$/.exec(url);
           if (clip) {
