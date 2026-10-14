@@ -1,5 +1,5 @@
 # Automatic tiers: how strictly the headset checks each sign (training/src/ashiria_train/tiers.py).
-# A co-creator's choice in the catalogue (tier: scored | lenient | watch) always wins over these rules.
+# The team's choice in the catalogue (tier: scored | lenient | watch) always wins over these rules.
 # The first matching group applies: watch, then lenient; anything else is scored. Every reason is recorded.
 
 watch:                          # shown and demonstrated, never scored

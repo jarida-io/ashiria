@@ -41,7 +41,7 @@ Assets/Ashiria/
   Scripts/Studio/     record → trim → replay → label → StudioTakeWriter   (#if ASHIRIA_STUDIO)
   Scripts/MR/         sign wall, Room Words (MR Utility Kit)
   StreamingAssets/Content/ksl-core-<version>/   manifest.json, catalogue.json, references.json (`ashiria pack`)
-  Content/            short videos of Entrant co-creators only (never dictionary video frames: that signer isn't an Entrant)
+  Content/            short sign videos of Entrants only (never dictionary video frames: that signer isn't an Entrant)
   Scenes/             Learn.unity, Studio.unity
 ```
 

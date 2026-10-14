@@ -15,7 +15,7 @@
    "wrong": 0.0
   }
  },
- "content_hash": "dfa6f17cbaae22b211b95e152549bf56fbd52c9fe39cb95f9b3fc0605ab8f788",
+ "content_hash": "3e42ac3e1970c4fed154b3d7141f48b238816e2460148fe7512e19e32b497c89",
  "distribution": "internal",
  "engine": {
   "active_fraction": 0.3,
@@ -90,7 +90,7 @@
  "files": {
   "catalogue": {
    "path": "catalogue.json",
-   "sha256": "06954c85c1a3be1a393f40916b9d5109fee0fb03da9a686b26cc37787b13c971"
+   "sha256": "96dbe8222143d4d930d577170263e1b44c99c6247d26dcbb9779e75eaf95f675"
   },
   "references": {
    "path": "references.json",

@@ -6,7 +6,7 @@ takes into reference signs that replace the KSL Dictionary drafts, sign by sign.
 A take keeps **both** the raw tracking and the canonical frames the app computed:
 
 - **Raw world poses** let us re-run canonicalisation if the spec changes (head frame, shoulder width,
-  joint use) without another recording session with the co-creators.
+  joint use) without recording everything again.
 - **The app's canonical frames** give a free on-device parity check: the importer recomputes them in
   Python and warns if they differ.
 - **Joint rotations** keep a skinned shadow hand possible later (packs carry positions only).

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace Ashiria.Engine
 {
     /// <summary>
-    /// Default English wording for Verify hints (RUNTIME_SPEC §4). The Deaf co-creators review this wording; a sign's
+    /// Default English wording for Verify hints (RUNTIME_SPEC §4). Review the wording with learners; a sign's
     /// own catalogue hint is shown after two misses instead. Directions are canonical, so "your signing hand side"
     /// is right for right-handed users and left for left-handed ones.
     /// </summary>

@@ -15,7 +15,7 @@ The C# hand-sign engine shared by the Ashiria apps. It is a line-for-line port o
 | `Signs.cs` | `SignRef` / `Take` / `KeyPose` / `Tolerances`: what the engine knows about each sign |
 | `Verifier.cs` | Verify: pass/fail, score, per-component errors, hint codes |
 | `Recogniser.cs` | Free Sign: match / ambiguous / not sure |
-| `HintText.cs` | Default English for hint codes (the co-creators review the wording) |
+| `HintText.cs` | Default English for hint codes |
 | `Onboarding.cs` | The user's rest height from resting wrist samples |
 | `EngineParams.cs` | Every parameter; packs override the defaults |
 

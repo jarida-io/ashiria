@@ -128,7 +128,7 @@ rest first and hold or drop afterwards. Every attempt then goes through the real
 - **The temperature.**
 
 **Tiers** (`configs/tiers.yaml`) are decided in this order:
-1. A co-creator override always wins.
+1. The team's choice in the catalogue always wins.
 2. **Watch-only:** tracking is poor, hands overlap, the face carries meaning, or the sign is rarely found.
 3. **Lenient** (about 1.4× wider, look-alike guard kept): near the face, two hands, handshape change, a
    known hard handshape, or the scored check fails too many correct attempts.

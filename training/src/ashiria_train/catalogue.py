@@ -1,7 +1,7 @@
-"""The sign catalogue: content/catalogue/<pack>.yaml, committed, edited by the Deaf co-creators.
+"""The sign catalogue: content/catalogue/<pack>.yaml, committed, edited by the team.
 
 It says which signs the app teaches, in which unit and order, how strictly each is checked (`tier`:
-auto, or a co-creator override), the team's own hint, and where its reference comes from. It holds
+auto, or the team's override), the team's own hint, and where its reference comes from. It holds
 no personal data and none of the KSL Dictionary's text. `ashiria catalogue` creates it from a
 vocabulary file and, on later runs, only adds new words: existing entries are never touched.
 """
@@ -22,7 +22,7 @@ HEADER = """\
 # Ashiria sign catalogue: what the app teaches. Edit freely; `ashiria catalogue` only adds new words.
 #   tier:   auto (computed from tracking checks) | scored | lenient | watch (shown, never scored)
 #   hint:   the team's own words, shown after two misses (never text from the KSL Dictionary)
-#   review: set status to approved (with by/date) once the Deaf co-creators have checked the sign
+#   review: set status to approved (with by/date) once the sign's Studio recording has been checked
 #   sources.dictionary: the KSL Dictionary sign used as a draft until Studio takes replace it
 """
 

@@ -11,7 +11,7 @@ from ashiria_train.canonical import steadiest_frame
 from ashiria_train.catalogue import load_catalogue, parse_vocabulary, update_catalogue
 from ashiria_train.config import Config
 from ashiria_train.matching import segment_descriptor
-from ashiria_train.pack import FORBIDDEN_KEYS, forbidden_keys, release_problems, take_segment, write_pack
+from ashiria_train.pack import FORBIDDEN_KEYS, forbidden_keys, release_selection, take_segment, write_pack
 from ashiria_train.params import EngineParams
 from ashiria_train.pipeline import cut_reference
 from ashiria_train.references import tag
@@ -53,7 +53,7 @@ def test_tier_rules():
     assert assign_tier(entry, {**tags, "dominant_tracked": 0.5}, good, rules)[0] == "watch"
     assert assign_tier({"id": "letter-s", "tier": "auto"}, tags, good, rules)[0] == "lenient"
     assert assign_tier({**entry, "tier": "scored", "tier_note": "checked by the team"}, {**tags, "dominant_tracked": 0.5},
-                       good, rules) == ("scored", "co-creator", ["checked by the team"])
+                       good, rules) == ("scored", "team", ["checked by the team"])
 
 
 def _synthetic_signs():
@@ -108,14 +108,22 @@ def test_pack_is_deterministic(pack, tmp_path):
     assert a["content_hash"] == b["content_hash"]
 
 
-def test_forbidden_fields_and_release_rules(pack):
+def test_forbidden_fields_and_release_rules(pack, tmp_path):
     assert forbidden_keys({"signs": [{"takes": [{"clip_id": "x"}]}]}) == ["/signs[0]/takes[0]/clip_id"]
     assert {"video", "description", "clip_id"} <= FORBIDDEN_KEYS
     _, catalogue, sources = pack
-    assert release_problems(catalogue, sources, [], {}) == []
-    sources = {**sources, "flat": SignSource("ksl_dictionary", sources["flat"].takes, sources["flat"].tags)}
-    problems = release_problems(catalogue, sources, ["missing-sign"], {})
-    assert len(problems) == 2 and "written permission" in problems[1]
-    assert len(release_problems(catalogue, sources, [], {"ksl_dictionary": {"permission": "written"}})) == 0
-    draft = {**catalogue, "signs": [{**catalogue["signs"][0], "review": {"status": "draft"}}] + catalogue["signs"][1:]}
-    assert "not approved" in release_problems(draft, sources, [], {"ksl_dictionary": {"permission": "written"}})[0]
+    ship, left_out, problems = release_selection(catalogue, sources, [], {})
+    assert set(ship) == set(sources) and left_out == {} and problems == []
+    # Dictionary drafts without permission and signs with no reference are left out, not shipped.
+    mixed = {**sources, "flat": SignSource("ksl_dictionary", sources["flat"].takes, sources["flat"].tags)}
+    ship, left_out, problems = release_selection(catalogue, mixed, ["missing-sign"], {})
+    assert "flat" not in ship and set(left_out) == {"flat", "missing-sign"} and problems == []
+    ship, _, _ = release_selection(catalogue, mixed, [], {"ksl_dictionary": {"permission": "written"}})
+    assert "flat" in ship
+    draft = {**catalogue, "signs": [{**catalogue["signs"][1], "review": {"status": "draft"}}] + catalogue["signs"][2:]}
+    assert "not approved" in release_selection(draft, sources, [], {})[2][0]
+    # A release built from the mixed sources ships only the Studio signs.
+    out = write_pack(catalogue, mixed, ["missing-sign"], {}, P, AUG, tmp_path, release=True, attempts=4)
+    shipped = [s["id"] for s in json.loads((out / "catalogue.json").read_text())["signs"]]
+    assert "flat" not in shipped and len(shipped) == len(sources) - 1
+    assert json.loads((out / "manifest.json").read_text())["distribution"] == "release"

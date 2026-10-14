@@ -6,8 +6,8 @@ content/packs/<pack_id>-<version>/ (git-ignored) holds three JSON files:
   references.json  per sign: reference takes (hand poses only), tolerances, tau
 
 Packs never contain video, images or the KSL Dictionary's text, and only pseudonymous signer ids.
-`--release` refuses dictionary-derived signs until the owners' written permission is recorded in
-content/rights.yaml, and any sign the Deaf co-creators have not approved.
+`--release` ships only signs with distributable references (Studio takes, or dictionary drafts once the
+owners' written permission is recorded in content/rights.yaml), and only signs the team has approved.
 """
 
 from __future__ import annotations
@@ -93,19 +93,30 @@ def _git() -> dict:
         return {"git": None, "dirty": None}
 
 
-def release_problems(catalogue: dict, sources: dict, missing: list[str], rights: dict) -> list[str]:
+def release_selection(catalogue: dict, sources: dict, missing: list[str], rights: dict
+                      ) -> tuple[dict, dict[str, str], list[str]]:
+    """What a release pack may contain: (sources to ship, {left-out id: why}, blocking problems).
+
+    Signs with no reference, or whose only reference is a KSL Dictionary draft without written permission in
+    content/rights.yaml, are left out automatically, so a release ships whatever the team has recorded in
+    Studio. Shipped signs must be approved (review.status) by the team."""
+    allowed = (rights.get("ksl_dictionary") or {}).get("permission") == "written"
+    left_out = {sid: "no reference yet" for sid in missing}
+    ship = {}
+    for sid, src in sources.items():
+        if src.kind == "ksl_dictionary" and not allowed:
+            left_out[sid] = "KSL Dictionary draft only (record it in Studio)"
+        else:
+            ship[sid] = src
     problems = []
-    if missing:
-        problems.append(f"no reference for: {', '.join(missing)}")
-    dictionary_signs = [sid for sid, s in sources.items() if s.kind == "ksl_dictionary"]
-    if dictionary_signs and (rights.get("ksl_dictionary") or {}).get("permission") != "written":
-        problems.append(f"{len(dictionary_signs)} signs use KSL Dictionary drafts but content/rights.yaml records no "
-                        "written permission (ksl_dictionary.permission: written)")
-    unapproved = [e["id"] for e in catalogue["signs"] if (e.get("review") or {}).get("status") != "approved"]
+    unapproved = [e["id"] for e in catalogue["signs"]
+                  if e["id"] in ship and (e.get("review") or {}).get("status") != "approved"]
     if unapproved:
-        problems.append(f"{len(unapproved)} signs not approved by the co-creators (review.status), e.g. "
-                        + ", ".join(unapproved[:6]))
-    return problems
+        problems.append(f"{len(unapproved)} signs not approved yet (set review.status: approved in the catalogue), "
+                        "e.g. " + ", ".join(unapproved[:6]))
+    if len(ship) < 2:
+        problems.append(f"only {len(ship)} signs have distributable references: record signs in Studio first")
+    return ship, left_out, problems
 
 
 def build_pack(cfg: Config, pack_id: str = "ksl-core", release: bool = False, attempts: int = 16) -> Path:
@@ -120,9 +131,14 @@ def write_pack(catalogue: dict, sources: dict, missing: list[str], rights: dict,
                out_root: Path, release: bool = False, attempts: int = 16, distractors=()) -> Path:
     pack_id = catalogue["pack_id"]
     if release:
-        problems = release_problems(catalogue, sources, missing, rights)
+        sources, left_out, problems = release_selection(catalogue, sources, missing, rights)
         if problems:
             raise SystemExit("Not releasable:\n  " + "\n  ".join(problems))
+        if left_out:
+            print(f"Release leaves out {len(left_out)} signs: "
+                  + "; ".join(f"{sid} ({why})" for sid, why in list(left_out.items())[:8])
+                  + ("…" if len(left_out) > 8 else ""))
+        missing = []
     if len(sources) < 2:
         raise SystemExit("Need references for at least two catalogue signs.")
     if missing:

@@ -40,10 +40,8 @@ of any age.
 
 ## Sign content
 
-The reference signs in the app were created with Deaf Kenyan Sign Language co-creators, who gave written
-consent. [If applicable: some first-draft references were adapted, with permission, from the KSL Dictionary.]
-The app contains hand-movement data derived from these recordings. It contains no videos of anyone except
-co-creators who agreed to appear.
+The reference signs in the app were recorded by its developer on a development headset. The app contains
+hand-movement data derived from those recordings, and no videos or images of anyone else.
 
 ## Meta
 

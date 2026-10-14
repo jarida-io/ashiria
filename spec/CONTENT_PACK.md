@@ -8,14 +8,17 @@ What the headset loads to teach and check signs. `ashiria pack` builds one from 
 
 - **Hand poses only.** No video, images or thumbnails, and none of the KSL Dictionary's text (descriptions,
   notes). The builder refuses forbidden keys (`video`, `image`, `clip_id`, `description`, `note`, `name`,
-  `email`, …). Co-creator demonstration videos are separate app assets, keyed by sign id.
+  `email`, …). Demonstration videos (Entrants only) are separate app assets, keyed by sign id.
 - **Pseudonymous signer ids only** (`S01`). Never names.
 - **Studio replaces dictionary.** A sign's reference comes either from kept Studio takes or from the
   dictionary draft, never a mix.
-- **`distribution: internal`** packs may contain dictionary drafts. They are for development headsets only.
-  `ashiria pack --release` refuses unless both of these hold:
-  - every dictionary-sourced sign has written permission recorded in `content/rights.yaml`;
-  - every sign has `review.status: approved` from the Deaf co-creators.
+- **`distribution: internal`** packs may contain dictionary drafts. They are for the development headset only.
+- **`ashiria pack --release`** ships only distributable signs:
+  - signs with no reference, and dictionary drafts without written permission in `content/rights.yaml`, are
+    left out automatically (and listed);
+  - every shipped sign must have `review.status: approved` in the catalogue, or the build stops.
+
+  For the competition no permission is requested, so a release pack contains Studio recordings only.
 - **Deterministic.** Same inputs, same `content_hash` (simulation seed fixed, keys sorted, values rounded).
 
 ## Files

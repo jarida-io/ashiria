@@ -19,7 +19,7 @@ def assign_tier(entry: dict, tags: dict, stats: dict, rules: dict) -> tuple[str,
     """(tier, source, reasons). `stats` holds simulation results: top1, top3, verify_pass,
     lookalike_false_pass, segmentation_miss (any may be missing)."""
     if entry.get("tier", "auto") != "auto":
-        return entry["tier"], "co-creator", [entry.get("tier_note") or "chosen by the co-creators"]
+        return entry["tier"], "team", [entry.get("tier_note") or "chosen by the team"]
 
     def above(key: str, limit) -> bool:
         return limit is not None and key in stats and stats[key] > limit

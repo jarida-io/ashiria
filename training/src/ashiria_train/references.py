@@ -2,7 +2,7 @@
 
 For each sign: the canonical segment (the app's shadow-hand animation), the dominant hand's finger
 angles at its steadiest frame (targets for per-finger feedback), and tags that help pick signs the
-headset can check. The tags are hints for the Deaf co-creators, not decisions.
+headset can check. The tags are hints for choosing the vocabulary, not decisions.
 """
 
 from __future__ import annotations

@@ -62,7 +62,7 @@ Then run `ashiria check` (are the hand slots and coordinate axes consistent?).
 
 This writes these files to `exports/dictionary/references/`:
 - **`references.csv`:** tags for every sign: one or two hands, static or moving, near the face, hands close
-  together, tracking quality. They help the co-creators pick a vocabulary the headset can check.
+  together, tracking quality. They help pick a vocabulary the headset can check.
 - **`references.json`:** for each vocabulary sign, the reference take (cut exactly like a live attempt) and its key
   frame, plus the dictionary's description (local only, never packed).
 - **`lookalikes.csv`, `distances.npy`:** each vocabulary sign's nearest neighbours, i.e. the likely confusions.
@@ -79,9 +79,9 @@ catalogue (content/catalogue/ksl-core.yaml, committed)  +  references (dictionar
 
 | Command | What it does |
 |---|---|
-| `make catalogue` | Creates or extends `content/catalogue/ksl-core.yaml` from `configs/vocabulary_v1.txt`. Re-running only adds new words; the co-creators' edits (tiers, hints, approvals) are kept |
-| `make calibrate` | Simulated attempts through the real segmenter → tau, Free Sign thresholds, tiers (`configs/tiers.yaml`). Writes `exports/calibration/ksl-core.json` and `tiers_ksl-core.csv` for the co-creators' review |
-| `make pack` | Runs calibration, then writes the pack (`spec/CONTENT_PACK.md`). Add `--release` (`.venv/bin/ashiria pack --release`) for a distributable pack. It refuses without dictionary permission in `content/rights.yaml` and co-creator approval of every sign |
+| `make catalogue` | Creates or extends `content/catalogue/ksl-core.yaml` from `configs/vocabulary_v1.txt`. Re-running only adds new words; your edits (tiers, hints, approvals) are kept |
+| `make calibrate` | Simulated attempts through the real segmenter → tau, Free Sign thresholds, tiers (`configs/tiers.yaml`). Writes `exports/calibration/ksl-core.json` and `tiers_ksl-core.csv` for review |
+| `make pack` | Runs calibration, then writes the pack (`spec/CONTENT_PACK.md`). Add `--release` (`.venv/bin/ashiria pack --release`) for a distributable pack: it ships only Studio-recorded signs (dictionary drafts need written permission in `content/rights.yaml`) and stops if a shipped sign isn't approved |
 | `make studio-import STUDIO=data/studio/<session>` | Studio takes pulled from the headset → `exports/studio/store.json`. Studio takes then replace those signs' dictionary drafts in the next pack |
 | `.venv/bin/ashiria studio-fake` | Fake Studio takes from the dictionary references, to test the import before the headset arrives |
 | `make golden` | Regenerates `spec/golden/` (engine and runtime vectors, mini pack, Studio take) for the C# tests |
