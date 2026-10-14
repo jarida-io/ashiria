@@ -1,0 +1,16 @@
+{
+  "name": "Ashiria Learn",
+  "short_name": "Ashiria",
+  "description": "Practise Kenyan Sign Language with your own hands: copy the shadow hands and get feedback on each finger.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0b3a5c",
+  "theme_color": "#0b3a5c",
+  "icons": [
+    { "src": "/icons/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "/icons/icon-512-maskable.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}
