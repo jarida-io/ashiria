@@ -5,9 +5,9 @@ ksl_dictionary:
   # Packs carry only hand-pose data derived from the videos: never video, images or the dictionary's text, and the
   # dictionary is credited in the write-up, not inside the app.
   permission: written     # none | written
-  reference: "Confirmed by Jerry Ochieng, 14 Oct 2026 (letter or email reference to add)"
+  reference: "Held by Jerry Ochieng; confirmed by Jerry on 14 Oct 2026 (\"I have all the rights\")"
   date: 2026-10-14
-  scope: "derived hand-pose data in the Ashiria app (to confirm: public hosting of the competition build)"
+  scope: "to develop the KSL translator (Jerry's KSL platform, of which Ashiria is the Quest app)"
 
 studio:
   # Studio signers other than the developer (team members who are Entrants) sign this consent form version.
