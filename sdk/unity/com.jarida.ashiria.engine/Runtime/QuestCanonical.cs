@@ -53,6 +53,11 @@ namespace Ashiria.Engine
         /// left-handed users put the (mirrored) left hand there.</summary>
         public static int SlotFor(bool isLeftHand, bool leftHanded) => (isLeftHand == leftHanded) ? Joints.Dominant : Joints.Other;
 
+        /// <summary>A unit quaternion (x, y, z, w) applied to (0, 0, 1): the head's forward vector, as Unity's
+        /// <c>rotation * Vector3.forward</c>.</summary>
+        public static Vec3 Forward(float qx, float qy, float qz, float qw) =>
+            new Vec3(2f * (qx * qz + qw * qy), 2f * (qy * qz - qw * qx), 1f - 2f * (qx * qx + qy * qy));
+
         /// <summary>A hand counts as present only when tracked with high confidence, not pose-inferred, and not
         /// performing the system gesture.</summary>
         public static bool Usable(HandInput h) => h != null && h.Tracked && h.HighConfidence && !h.Inferred && !h.SystemGesture;

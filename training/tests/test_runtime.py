@@ -199,3 +199,10 @@ def test_recognise_match_not_sure_and_ambiguous():
     twins = [sign("flat", FLAT), sign("flat_too", FLAT + 0.02)]
     assert recognise(attempt(FLAT + 0.01), twins, P).status == "ambiguous"
     assert recognise(attempt(FLAT), [], P).status == "no_hands"
+
+
+def test_rest_height_from_resting_wrists():
+    from ashiria_train.onboarding import rest_height
+    assert rest_height([-2.0] * 20) == pytest.approx(-1.75)
+    assert rest_height([-1.0] * 20) == pytest.approx(-1.2) and rest_height([-3.0] * 20) == pytest.approx(-1.9)
+    assert rest_height([-2.0], fallback=-1.5) == -1.5

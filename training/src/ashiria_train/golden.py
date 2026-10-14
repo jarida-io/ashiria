@@ -284,7 +284,15 @@ def build_runtime_golden(cfg: Config) -> str:
                             "best": r.best, "runner_up": r.runner_up, "best_z": r.best_z, "runner_up_z": r.runner_up_z,
                             "confidence": r.confidence, "ranking": [list(x) for x in r.ranking]})
 
-    golden = {"spec_version": SPEC_VERSION, "pack": "pack_v1",
+    # A Studio take (spec/STUDIO_FORMAT.md) for the C# reader/writer: a short two-handed, left-handed stream.
+    from .studio import fake_take
+    take_seg = _rounded(sign_stream(fist, path=(0.3, 0.2, 0.0), other_at=(-0.3, -1.0, 0.6), rest_frames=2, rise=4,
+                                    hold=10, drop=2, after=2))
+    take = fake_take(take_seg, "fist", np.random.default_rng(5), signer="G01", handedness="left")
+    take["recorded_at"] = "2026-01-01T00:00:00Z"
+    (root / "studio_take_v1.json").write_text(json.dumps(take))
+
+    golden = {"spec_version": SPEC_VERSION, "pack": "pack_v1", "studio_take": "studio_take_v1.json",
               "tolerance": {"descriptor": 1e-3, "quest": 1e-4, "verify": 2e-3, "recognise": 2e-3},
               "prepare": prepare_cases, "quest": quest_cases, "segmenter": seg_cases,
               "verify": verify_cases, "recognise": recog_cases}
