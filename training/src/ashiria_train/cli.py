@@ -63,6 +63,9 @@ def main(argv: list[str] | None = None) -> None:
     steps.add_parser("study-index", help="JSON index of every extracted dictionary clip (dev-only sign browser)")
     p = steps.add_parser("study-landmarks", help="JSON MediaPipe image landmarks of one dictionary clip")
     p.add_argument("clip_id")
+    p = steps.add_parser("embed", help="experiment: sign embedding over all dictionary signs, compared with DTW")
+    p.add_argument("--epochs", type=int, default=60)
+    p.add_argument("--attempts", type=int, default=4)
     p = steps.add_parser("catalogue", help="create or extend content/catalogue/<pack>.yaml from a vocabulary file")
     p.add_argument("--vocab", default="configs/vocabulary_v1.txt")
     p.add_argument("--pack", default="ksl-core")
@@ -135,6 +138,9 @@ def main(argv: list[str] | None = None) -> None:
         import json as _json
         from .study import clip_landmarks
         print(_json.dumps(clip_landmarks(args.clip_id)))
+    elif args.step == "embed":
+        from .embed import run_embed
+        run_embed(cfg, epochs=args.epochs, attempts=args.attempts)
     elif args.step == "catalogue":
         from .catalogue import update_catalogue
         update_catalogue(cfg, args.vocab, args.pack)
