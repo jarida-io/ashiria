@@ -6,6 +6,7 @@ import projectOptions from 'virtual:iwsdk-project';
 import { app } from './app-state.js';
 import { loadPack } from './content.js';
 import { HandSamplerSystem } from './hand-sampler.js';
+import { setupLanding } from './landing.js';
 import { LessonSystem } from './lesson.js';
 import { ShadowHandsSystem } from './shadow-hands.js';
 
@@ -17,6 +18,7 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, proje
   world.registerSystem(HandSamplerSystem);
   world.registerSystem(ShadowHandsSystem);
   world.registerSystem(LessonSystem);
+  setupLanding(world);
   // Development builds only: handles for scripted tests in the IWSDK emulator.
   if (import.meta.env.DEV) Object.assign(window, { __ashiria: { world, app, HandSamplerSystem, LessonSystem } });
   // Installed app (packaged PWA on Quest): tapping the icon is the user's go-ahead, so enter mixed reality

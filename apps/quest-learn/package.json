@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "build": "vite build",
     "preview": "vite preview",
-    "test:engine": "node --test ../../sdk/web/ashiria-engine/test/"
+    "test:engine": "node --test ../../sdk/web/ashiria-engine/test/",
+    "prebuild": "node scripts/privacy.mjs",
+    "privacy": "node scripts/privacy.mjs"
   },
   "dependencies": {
     "@ashiria/engine": "file:../../sdk/web/ashiria-engine",

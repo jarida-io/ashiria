@@ -1,17 +1,55 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, shrink-to-fit=no"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#0b3a5c" />
+    <meta name="description" content="Practise Kenyan Sign Language with your own hands on Meta Quest: copy the shadow hands and get feedback on every finger." />
     <link rel="icon" href="/icons/icon-192.png" />
     <title>Ashiria Learn</title>
+    <style>
+      :root { --bg: #0b3a5c; --card: #ffffff; --ink: #14212b; --muted: #55636e; --accent: #0b7f99; --line: #dbe3e8; }
+      body { margin: 0; font: 18px/1.45 -apple-system, system-ui, sans-serif; }
+      #landing { position: fixed; inset: 0; z-index: 10; overflow-y: auto; display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, #1fb5c9, var(--bg)); padding: 24px; box-sizing: border-box; }
+      #landing[hidden] { display: none; }
+      .card { background: var(--card); color: var(--ink); border-radius: 24px; max-width: 620px; width: 100%; padding: 32px 36px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); }
+      .brand { display: flex; align-items: center; gap: 14px; }
+      .brand img { width: 56px; height: 56px; border-radius: 14px; }
+      h1 { font-size: 34px; margin: 0; }
+      .tag { color: var(--muted); margin: 6px 0 20px; }
+      ul { padding: 0; margin: 0 0 24px; list-style: none; display: grid; gap: 10px; }
+      li { display: flex; gap: 12px; align-items: baseline; }
+      li b { display: inline-grid; place-items: center; min-width: 30px; height: 30px; border-radius: 50%; background: #e3f5f8; color: var(--accent); font-size: 15px; }
+      #start { display: block; width: 100%; font: inherit; font-size: 26px; font-weight: 700; padding: 22px; border: 0; border-radius: 18px;
+        background: var(--accent); color: #fff; cursor: pointer; }
+      #start:disabled { background: #9fb3bd; cursor: default; }
+      .row { display: flex; justify-content: space-between; gap: 16px; margin-top: 18px; flex-wrap: wrap; font-size: 16px; }
+      .row a, .row button { color: var(--accent); background: none; border: 0; font: inherit; padding: 8px 0; cursor: pointer; text-decoration: underline; }
+      #note { color: var(--muted); font-size: 16px; margin: 14px 0 0; }
+      video { width: 100%; border-radius: 14px; margin-top: 18px; background: #000; }
+    </style>
   </head>
-  <body style="margin: 0">
+  <body>
+    <div id="landing">
+      <div class="card">
+        <div class="brand"><img src="/icons/icon-192.png" alt="" /><h1>Ashiria</h1></div>
+        <p class="tag">Practise Kenyan Sign Language with your own hands. Copy the shadow hands and get feedback on every finger.</p>
+        <ul>
+          <li><b>1</b><span>Use a <strong>Meta Quest 3 or 3S</strong>, sitting down, in good light.</span></li>
+          <li><b>2</b><span><strong>Put your controllers down.</strong> Everything works with your hands.</span></li>
+          <li><b>3</b><span>When asked, <strong>allow hand tracking</strong> and <strong>spatial data</strong> (to find your walls).</span></li>
+        </ul>
+        <button id="start" disabled>Loading...</button>
+        <p id="note"></p>
+        <div class="row">
+          <button id="start-over" type="button">Start over (clears saved progress)</button>
+          <a href="/privacy.html">Privacy</a>
+        </div>
+      </div>
+    </div>
     <div id="scene-container"></div>
     <script type="module" src="/src/index.ts"></script>
   </body>

@@ -1,12 +1,12 @@
 # Ashiria Learn: privacy policy (draft)
 
-*Draft for review before publication. The developer dashboard needs a public URL for this policy; Jerry
-publishes it. Fill in the [brackets]. Last updated: [date].*
+*Draft for review before publication; it is published with the app at /privacy.html. Fill in the [brackets].
+Last updated: [date].*
 
 Ashiria Learn ("the app") is a Kenyan Sign Language practice app for Meta Quest, made by Jarida ("we") in
-Nairobi, Kenya. This policy explains what the app does with information about you. In short: **your hand
-movements are processed on your headset and never leave it, the app has no account, and it collects no
-analytics.**
+Nairobi, Kenya. It is a web app that runs in the Meta Quest Browser. This policy explains what the app does with
+information about you. In short: **your hand movements are processed on your headset and never leave it, the app
+has no account, and it collects no analytics.**
 
 ## What the app uses, and why
 
@@ -14,8 +14,8 @@ analytics.**
 |---|---|---|
 | **Hand tracking** (positions of your hand and finger joints, provided by the headset) | Compares your signing with the reference signs to give feedback, for example "bend your ring finger" | Processed in real time on your headset. Never stored as a recording, never sent anywhere |
 | **Head position and direction** (from the headset) | Works out where your hands are relative to you, and places menus | Processed in real time on your headset |
-| **Your progress** (signs practised and learned, streaks, scores) | Shows your progress and picks what to practise next | Saved on your headset only |
-| **Your settings** (signing hand, strictness, rest height, accessibility options) | Adapts the app to you, for example how strictly signs are checked | Saved on your headset only |
+| **Your progress** (signs practised and learned, streaks, scores) | Shows your progress and picks what to practise next | Saved in the browser's storage on your headset only |
+| **Your settings** (signing hand, strictness, rest height, accessibility options) | Adapts the app to you, for example how strictly signs are checked | Saved in the browser's storage on your headset only |
 | **Passthrough** (camera view of your room), if you use mixed-reality features | Lets you see your room while practising. The app never receives or stores camera images; the headset composes the view | Not accessible to the app |
 
 The app does **not**:
@@ -25,13 +25,16 @@ The app does **not**:
 - show adverts;
 - have an account, sign-in or social features.
 
-The app does not use the internet. [If a later version adds optional online features, this policy will be
-updated first and the feature will ask for your permission.]
+**Loading the app.** Like any web page, the app's files are downloaded from our web host ([host, e.g. Vercel])
+when you open the link. The host may keep standard server logs, such as your IP address and browser type, for a
+short time to run and protect the service. Apart from loading its own files, the app makes no network requests.
+Your hand data, progress and settings are never sent.
 
 ## Deleting your data
 
-Go to **Settings → Delete my data** in the app to erase your progress, settings and personal tolerances from
-the headset immediately. Uninstalling the app also deletes everything it saved.
+Press **Delete my data** on the lesson panel, or **Start over** on the start page, to erase your progress and
+settings from the headset immediately. Clearing this site's data in the Meta Quest Browser also deletes everything
+the app saved.
 
 ## Children
 
@@ -45,8 +48,9 @@ plus some recorded by the developer. The app contains only that hand-movement da
 
 ## Meta
 
-The app runs on Meta Quest. Meta's handling of data from your headset and account is covered by Meta's own
-privacy policy, not this one. Hand tracking itself is provided by the headset's system software.
+The app runs in the Meta Quest Browser on Meta Quest. Hand tracking, passthrough and the browser itself are
+provided by Meta, and Meta's handling of data from your headset and account is covered by Meta's own privacy
+policy, not this one.
 
 ## Contact
 
