@@ -8,8 +8,8 @@
  * - POST /dev/studio: saves a Studio take (spec/STUDIO_FORMAT.md) to ../../training/data/studio/<session>/.
  * - /dev/study: the study sheet (dev/study.html): each sign's local dictionary video next to its reference hands,
  *   with Approve / Reject buttons that run `ashiria approve`. /dev/study/browse: every sign in the dictionary's data
- *   sheet, with MediaPipe's landmarks drawn over its video and the reference Ashiria would cut from it. The videos
- *   never leave this Mac.
+ *   sheet, with MediaPipe's landmarks drawn over its video, the reference Ashiria would cut from it, audit flags and
+ *   the recogniser's results (signs.json of the newest training/runs/embed- run). The videos never leave this Mac.
  *
  * Production builds only bundle packs from public/packs/, and refuse any that is not a release pack
  * (`ashiria pack --release`: Studio-recorded, approved signs only).
@@ -26,6 +26,7 @@ const STUDIO = join(ROOT, 'training/data/studio');
 const TRAINING = join(ROOT, 'training');
 const ASHIRIA = join(TRAINING, '.venv/bin/ashiria');
 const VIDEO_ROOT = join(TRAINING, 'data');
+const RUNS = join(TRAINING, 'runs');
 const REVIEW = ['approved', 'rejected', 'draft'];
 // The sign browser's index is rebuilt when these change (re-import or re-audit of the dictionary).
 const INDEX_INPUTS = ['dictionary_labels.csv', 'dictionary_audit.csv'].map((f) => join(TRAINING, 'data/dictionary/manifests', f));
@@ -122,6 +123,12 @@ export function ashiriaDev(): Plugin {
               clips = new Map(entries.filter((c) => c.clip_id && c.video).map((c) => [c.clip_id as string, c.video as string]));
             }
             return send(res, 200, indexText);
+          }
+          if (url === '/recogniser.json') {
+            // Per-sign results of the newest `ashiria embed` run (`ashiria embed-signs`), if any.
+            const runs = existsSync(RUNS) ? readdirSync(RUNS).filter((d) => d.startsWith('embed-') && existsSync(join(RUNS, d, 'signs.json'))).sort() : [];
+            if (!runs.length) return send(res, 404, { error: 'no recogniser results yet: run `ashiria embed-signs`' });
+            return send(res, 200, readFileSync(join(RUNS, runs[runs.length - 1], 'signs.json'), 'utf8'));
           }
           const lm = /^\/landmarks\/([a-f0-9]+)$/.exec(url);
           if (lm) {

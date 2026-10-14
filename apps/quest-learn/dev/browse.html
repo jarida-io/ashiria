@@ -44,6 +44,14 @@
   .empty { color: var(--muted); padding: 40px 0; }
   .missing { aspect-ratio: 4 / 3; border: 1px dashed var(--line); border-radius: 10px; display: grid; place-items: center; text-align: center; padding: 16px; color: var(--muted); }
   .links button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  .rec-summary { font-size: 12px; color: var(--muted); }
+  .rec-summary b { color: var(--ink); font-weight: 600; }
+  section.rec { max-width: 980px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+  section.rec h3 { font-size: 15px; margin: 0 0 6px; }
+  section.rec p { margin: 4px 0; }
+  section.rec .score { font-variant-numeric: tabular-nums; font-weight: 600; }
+  section.rec .score.miss { color: var(--warn); }
+  .links button + button::before { content: ''; }
   ul.audit { margin: 8px 0 0; padding-left: 20px; color: var(--warn); overflow: visible; flex: none; }
   ul.audit li { border: 0; padding: 2px 0; cursor: default; }
   ul.audit li:hover { background: none; }
@@ -85,6 +93,12 @@
         <option value="left_leads">Left hand leads</option>
         <option value="broken">No usable video</option>
       </select>
+      <select id="rec" hidden>
+        <option value="">Recogniser: all signs</option>
+        <option value="normal">Recogniser missed a normal test</option>
+        <option value="harder">Recogniser missed a harder test</option>
+      </select>
+      <div class="rec-summary" id="rec-summary" hidden></div>
 
     </div>
     <ul id="list"></ul>
@@ -117,6 +131,8 @@ const ISSUES = ['few_hands', 'no_signing', 'partial_decode', 'no_reference', 'lo
 const FLAG_CHIP = { few_hands: 'few hands', no_signing: 'hands low', partial_decode: 'decode', no_reference: 'no reference',
   long: 'long', short: 'short', copies_differ: 'copies differ', duplicate: 'duplicate', near_duplicate: 'near duplicate' };
 let index = [], shown = [], listed = 0, current = null, raf = 0;
+let rec = null;            // recogniser results (ashiria embed-signs), or null
+const byClip = new Map();  // clip_id -> first index entry, to name the signs the recogniser mentions
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -125,7 +141,8 @@ const narrow = () => matchMedia('(max-width: 760px)').matches;
 function item(x, i) {
   const chips = (x.variant ? `<span class="chip var">video ${esc(x.variant)}</span>` : '') +
     (x.v1 ? '<span class="chip v1">v1</span>' : '') + (x.clip_id ? '' : '<span class="chip none">no video</span>') +
-    x.flags.filter((f) => FLAG_CHIP[f]).map((f) => `<span class="chip none">${FLAG_CHIP[f]}</span>`).join('');
+    x.flags.filter((f) => FLAG_CHIP[f]).map((f) => `<span class="chip none">${FLAG_CHIP[f]}</span>`).join('') +
+    (missed(x, 'normal') ? '<span class="chip none">recogniser miss</span>' : '');
   const also = x.same_video.length ? ' - also: ' + esc(x.same_video.join(', ')) : '';
   return `<li data-i="${i}" class="${current === x ? 'on' : ''}">${esc(x.sign)}${chips}<small>${esc(x.category)}${also}</small></li>`;
 }
@@ -138,10 +155,40 @@ function listMore() {
   if (listed < shown.length) $('list').insertAdjacentHTML('beforeend', `<li class="more">Showing ${listed} of ${shown.length}. Scroll for more.</li>`);
 }
 
+function recOf(x) { return rec && x.clip_id ? rec.results[x.clip_id] : null; }
+function missed(x, set) { const r = recOf(x)?.[set]; return !!r && r.tests > 0 && r.first < r.tests; }
+const pct = (v) => (v == null ? '-' : `${Math.round(v * 100)}%`);
+function signButton(clip) {
+  const y = byClip.get(clip);
+  return y ? `<button data-clip="${clip}">${esc(y.sign)}</button>` : esc(clip);
+}
+
+function recSection(x) {
+  const r = recOf(x);
+  if (!r) return '';
+  const line = (label, t, dtw) => {
+    if (!t || !t.tests) return `<p>${label}: no test attempt (the attempt detector didn't trigger on this clip).</p>`;
+    const miss = t.first < t.tests;
+    const mist = t.mistaken_for.length ? `; mistaken for ${t.mistaken_for.map(signButton).join(', ')}` : '';
+    const cur = dtw && t.dtw_tests ? ` Current matcher: <span class="score${t.dtw_first < t.dtw_tests ? ' miss' : ''}">${t.dtw_first} of ${t.dtw_tests}</span>.` : '';
+    return `<p>${label}: recognised first in <span class="score${miss ? ' miss' : ''}">${t.first} of ${t.tests}</span>${mist}.${cur}</p>`;
+  };
+  const closest = r.closest.map(([c, s]) => `${signButton(c)} <span class="muted">${s.toFixed(2)}</span>`).join(', ');
+  return `<section class="rec links">
+    <h3>Recogniser</h3>
+    ${line('Test attempts', r.normal, true)}
+    ${line('With harder variation', r.harder, false)}
+    <p>Closest signs: ${closest}</p>
+    <p class="cap">Simulated attempts made from this one signer's video, searched among all ${rec.signs} signs: this shows
+      how robust the recogniser is, not how well it recognises other people.</p>
+  </section>`;
+}
+
 function filter() {
   const q = $('q').value.trim().toLowerCase(), cat = $('cat').value, v1 = $('v1only').checked, audit = $('audit').value;
   const auditOk = (x) => !audit || (audit === 'issues' ? x.flags.some((f) => ISSUES.includes(f)) : x.flags.includes(audit));
-  shown = index.filter((x) => (!cat || x.category === cat) && (!v1 || x.v1) && auditOk(x) &&
+  const recSet = $('rec').value;
+  shown = index.filter((x) => (!cat || x.category === cat) && (!v1 || x.v1) && auditOk(x) && (!recSet || missed(x, recSet)) &&
     (!q || x.sign.toLowerCase().includes(q) || x.same_video.some((n) => n.toLowerCase().includes(q))));
   if (q) shown.sort((a, b) => (b.sign.toLowerCase().startsWith(q) - a.sign.toLowerCase().startsWith(q)));
   $('list').innerHTML = ''; $('list').scrollTop = 0; listed = 0;
@@ -247,9 +294,14 @@ async function open(x, push = true) {
     ${notes ? `<ul class="audit">${notes}</ul>` : ''}
     ${media}
     ${x.description ? `<p class="desc">${esc(x.description)}</p>` : ''}
-    ${x.note ? `<p class="desc muted">Note: ${esc(x.note)}</p>` : ''}`;
+    ${x.note ? `<p class="desc muted">Note: ${esc(x.note)}</p>` : ''}
+    ${recSection(x)}`;
   $('main').scrollTop = 0;
   $('back').addEventListener('click', () => history.back());
+  $('main').querySelectorAll('[data-clip]').forEach((b) => b.addEventListener('click', () => {
+    const y = byClip.get(b.dataset.clip);
+    if (y) open(y, false);
+  }));
   $('main').querySelectorAll('[data-name]').forEach((b) => b.addEventListener('click', () => {
     const y = index.find((e) => e.sign === b.dataset.name && e.clip_id === x.clip_id) || index.find((e) => e.sign === b.dataset.name);
     if (y) open(y, false);
@@ -293,11 +345,27 @@ addEventListener('popstate', closeDetail);
 fetch('/dev/study/index.json').then((r) => (r.ok ? r.json() : r.text().then((t) => Promise.reject(t)))).then((d) => {
   index = d;
   [...new Set(d.map((x) => x.category).filter(Boolean))].sort().forEach((c) => $('cat').insertAdjacentHTML('beforeend', `<option>${esc(c)}</option>`));
+  d.forEach((x) => { if (x.clip_id && !byClip.has(x.clip_id)) byClip.set(x.clip_id, x); });
   filter();
+  loadRecogniser();
   const wanted = new URLSearchParams(location.search).get('sign');
   const first = wanted ? d.find((x) => x.sign.toLowerCase() === wanted.toLowerCase() && x.clip_id) : null;
   if (first) open(first);
 }, (err) => { $('count').textContent = 'Could not load: ' + err; });
+async function loadRecogniser() {
+  const res = await fetch('/dev/study/recogniser.json').catch(() => null);
+  if (!res || !res.ok) return;
+  rec = await res.json();
+  const s = rec.summary, when = rec.run.replace(/^embed-(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d).*/, '$3/$2 $4:$5');
+  const v1 = s.normal.v1_dtw_first != null ? ` Course signs: <b>${pct(s.normal.v1_first)}</b> (current matcher ${pct(s.normal.v1_dtw_first)}).` : '';
+  $('rec-summary').innerHTML = `Recogniser (run ${when}, trained on ${rec.trained_on} signs): right first time in <b>${pct(s.normal.first)}</b>
+    of test attempts, <b>${pct(s.harder.first)}</b> with harder variation.${v1} One signer, simulated attempts.`;
+  $('rec-summary').hidden = $('rec').hidden = false;
+  filter();
+  if (current) open(current, false);
+}
+
+$('rec').addEventListener('change', filter);
 $('q').addEventListener('input', filter);
 $('cat').addEventListener('change', filter);
 $('v1only').addEventListener('change', filter);
