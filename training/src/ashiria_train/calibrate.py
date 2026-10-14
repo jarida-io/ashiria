@@ -58,7 +58,10 @@ def simulated_stream(seg: Segment, rng: np.random.Generator, aug: dict, tick_hz:
 
     first, last = seg.wrist_pos[0], seg.wrist_pos[-1]
     rest_first, rest_last = first.copy(), last.copy()
-    rest_first[:, 1] = rest_last[:, 1] = REST_Y
+    # Only hands in signing space rise from (and drop to) rest; a passive hand already resting stays put.
+    rising = first[:, 1] > VIDEO_REST_HEIGHT
+    rest_first[rising, 1] = REST_Y
+    rest_last[last[:, 1] > VIDEO_REST_HEIGHT, 1] = REST_Y
     rise = int(rng.integers(6, 13))
     parts = [frames(seg.hand_rel[0], [rest_first] * 10),
              frames(seg.hand_rel[0], [rest_first + (first - rest_first) * (i + 1) / (rise + 1) for i in range(rise)]),

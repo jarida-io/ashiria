@@ -7,7 +7,7 @@ VOCAB ?= configs/vocabulary_v1.txt
 RUN ?=
 NAME ?=
 
-.PHONY: setup models audit extract build baseline train evaluate export test dictionary references
+.PHONY: setup models audit extract build baseline train evaluate export test dictionary references catalogue calibrate pack golden studio-import
 
 setup:        # data pipeline only: audit, extract, references
 	$(PY) -m venv $(VENV)
@@ -53,3 +53,21 @@ dictionary:
 
 references:
 	$(BIN)/ashiria references --config $(CONFIG) --vocab $(VOCAB)
+
+# Content for the headset: catalogue (committed) -> calibration -> content pack (content/packs/).
+catalogue:
+	$(BIN)/ashiria catalogue --vocab $(VOCAB)
+
+calibrate:
+	$(BIN)/ashiria calibrate
+
+pack:
+	$(BIN)/ashiria pack
+
+STUDIO ?= data/studio
+studio-import:  # takes pulled from the headset into $(STUDIO)
+	$(BIN)/ashiria import-studio $(STUDIO)
+
+# Cross-language test vectors for the C# engine (spec/golden/).
+golden:
+	$(BIN)/ashiria golden
