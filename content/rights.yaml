@@ -1,13 +1,13 @@
 # Who allows what. `ashiria pack --release` refuses a pack whose sources lack permission here.
 
 ksl_dictionary:
-  # The KSL Dictionary videos belong to their owners. Permission is not being requested (decision 14 Oct 2026):
-  # dictionary drafts stay on the development Mac, and release packs ship Studio-recorded signs only.
-  # Packs may carry hand-pose data derived from them (never video, images or text) only once the owners agree in writing.
-  permission: none        # none | written
-  reference: ""           # e.g. the email thread or letter, once granted
-  date: null
-  scope: derived hand-pose data only; no video, images or text
+  # The KSL Dictionary videos belong to their owners. Jerry holds their permission (confirmed by Jerry on 14 Oct 2026).
+  # Packs carry only hand-pose data derived from the videos: never video, images or the dictionary's text, and the
+  # dictionary is credited in the write-up, not inside the app.
+  permission: written     # none | written
+  reference: "Confirmed by Jerry Ochieng, 14 Oct 2026 (letter or email reference to add)"
+  date: 2026-10-14
+  scope: "derived hand-pose data in the Ashiria app (to confirm: public hosting of the competition build)"
 
 studio:
   # Studio signers other than the developer (team members who are Entrants) sign this consent form version.

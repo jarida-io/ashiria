@@ -68,7 +68,7 @@ This writes these files to `exports/dictionary/references/`:
 - **`lookalikes.csv`, `distances.npy`:** each vocabulary sign's nearest neighbours, i.e. the likely confusions.
 - **`distractors.npz`:** 300 non-vocabulary signs, so calibration can check that Free Sign says "not sure" to them.
 
-**Rights:** the videos are the KSL Dictionary's copyright and carry no licence. Keep this to local development until the owners agree in writing. Nothing derived from these videos ships without that permission.
+**Rights:** the videos are the KSL Dictionary's copyright. Jerry holds the owners' permission (recorded in `content/rights.yaml`): derived hand poses may ship in packs. Video frames and the dictionary's text never do, and the videos themselves stay local.
 
 ## Content for the headset
 
@@ -81,7 +81,7 @@ catalogue (content/catalogue/ksl-core.yaml, committed)  +  references (dictionar
 |---|---|
 | `make catalogue` | Creates or extends `content/catalogue/ksl-core.yaml` from `configs/vocabulary_v1.txt`. Re-running only adds new words; your edits (tiers, hints, approvals) are kept |
 | `make calibrate` | Simulated attempts through the real segmenter → tau, Free Sign thresholds, tiers (`configs/tiers.yaml`). Writes `exports/calibration/ksl-core.json` and `tiers_ksl-core.csv` for review |
-| `make pack` | Runs calibration, then writes the pack (`spec/CONTENT_PACK.md`). Add `--release` (`.venv/bin/ashiria pack --release`) for a distributable pack: it ships only Studio-recorded signs (dictionary drafts need written permission in `content/rights.yaml`) and stops if a shipped sign isn't approved |
+| `make pack` | Runs calibration, then writes the pack (`spec/CONTENT_PACK.md`). Add `--release` (`.venv/bin/ashiria pack --release`) for a distributable pack: it ships dictionary-derived signs (permission in `content/rights.yaml`) and Studio takes, and stops if a shipped sign isn't approved |
 | `make studio-import STUDIO=data/studio/<session>` | Studio takes pulled from the headset → `exports/studio/store.json`. Studio takes then replace those signs' dictionary drafts in the next pack |
 | `.venv/bin/ashiria studio-fake` | Fake Studio takes from the dictionary references, to test the import before the headset arrives |
 | `make golden` | Regenerates `spec/golden/` (engine and runtime vectors, mini pack, Studio take) for the C# tests |

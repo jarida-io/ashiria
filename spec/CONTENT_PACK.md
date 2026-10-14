@@ -18,7 +18,8 @@ What the headset loads to teach and check signs. `ashiria pack` builds one from 
     left out automatically (and listed);
   - every shipped sign must have `review.status: approved` in the catalogue, or the build stops.
 
-  For the competition no permission is requested, so a release pack contains Studio recordings only.
+  For the competition Jerry holds the dictionary owners' permission (`content/rights.yaml`), so release packs may
+  contain dictionary-derived hand poses next to Studio and team-video takes.
 - **Deterministic.** Same inputs, same `content_hash` (simulation seed fixed, keys sorted, values rounded).
 
 ## Files

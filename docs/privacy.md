@@ -40,8 +40,8 @@ of any age.
 
 ## Sign content
 
-The reference signs in the app were recorded by its developer on a development headset. The app contains
-hand-movement data derived from those recordings, and no videos or images of anyone else.
+The reference signs in the app are hand movements derived, with permission, from the KSL Dictionary's sign videos,
+plus some recorded by the developer. The app contains only that hand-movement data: no videos or images of anyone.
 
 ## Meta
 

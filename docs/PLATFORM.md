@@ -87,7 +87,7 @@ ashiria/
 
 | Phase | When | Delivers |
 |---|---|---|
-| **1. Hackathon** | Now to 18 Nov | Shared infrastructure: `spec` v1, catalogue for about 50 signs, references (dictionary drafts → Studio recordings), TypeScript engine (verify and recognise). **Ashiria Learn** (WebXR) with Free Sign. **Studio** in development builds, saving takes to the Mac through the dev server. The competition build stays offline with no backend |
+| **1. Hackathon** | Now to 18 Nov | Shared infrastructure: `spec` v1, catalogue for about 50 signs, references (dictionary drafts → Studio recordings), TypeScript engine (verify and recognise). **Ashiria Learn** (WebXR) with Free Sign, submitted as a hosted link. Solo build by Jerry. **Studio** in development builds, saving takes to the Mac through the dev server. No backend |
 | **2. Platform** | Dec 2026 to Feb 2027 | PocketBase service (contributor accounts, uploads, review queue, content packs), Studio uploads, content-pack updates in Learn, Quest store launch |
 | **3. Android (last)** | 2027 | Contribute and Interpret (from the 2025 phone app), phone contributions, first trained model (recognition v2), camera-based reading of another signer on Quest |
 

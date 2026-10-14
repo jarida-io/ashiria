@@ -2,7 +2,7 @@
 
 The Meta VR Start 2026 entry: practise Kenyan Sign Language with hand tracking on Meta Quest. It is built with
 Meta's [Immersive Web SDK](https://iwsdk.dev) (TypeScript, three.js, WebXR), and shipped as a packaged web app
-(PWA) through the Competition release channel.
+(PWA) later. For the competition, WebXR entries are submitted as a **hosted link** (GitHub Pages or Vercel).
 
 All recognition runs in [`@ashiria/engine`](../../sdk/web/ashiria-engine), the TypeScript port of the shared
 engine, parity-tested against the Python reference. This app only reads WebXR and draws.
@@ -48,12 +48,14 @@ make -C ../../training pack
 
 ## Release
 
-1. Build a release pack: `../../training/.venv/bin/ashiria pack --release`. It ships only Studio-recorded signs you
-   have approved (`review.status: approved` in `content/catalogue/ksl-core.yaml`).
+1. Build a release pack: `../../training/.venv/bin/ashiria pack --release`. It ships only distributable signs
+   (dictionary-derived poses, which need the permission recorded in `content/rights.yaml`, plus Studio and team takes)
+   that you have approved (`review.status: approved` in `content/catalogue/ksl-core.yaml`).
 2. Copy it into `public/packs/`. The build refuses any pack that isn't a release pack, and `public/packs/` is
    git-ignored.
-3. Run `npm run build`, host `dist/` on HTTPS, and package it as a PWA for the Competition release channel (the
-   `iwsdk-pwa-packaging` and `iwsdk-hosting` guides in `.claude/skills/`).
+3. Run `npm run build` and host `dist/` on HTTPS (Vercel recommended; see `iwsdk-hosting` in `.claude/skills/`).
+   The link is what judges open. Packaging as a PWA for the Horizon Store (`iwsdk-pwa-packaging`) comes after
+   the competition.
 
 **Data:** hand tracking is processed in the page and dropped. Progress and settings stay in this browser's
 storage, and "Delete my data" erases them. Nothing is uploaded.

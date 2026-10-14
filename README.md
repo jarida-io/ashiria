@@ -1,6 +1,6 @@
 # Ashiria
 
-Learn, practise and recognise Kenyan Sign Language, built with Deaf KSL signers. Several apps share one base; see [docs/PLATFORM.md](docs/PLATFORM.md). The Quest app is the Meta VR Start Developer Competition 2026 entry; see [docs/HACKATHON_PLAN.md](docs/HACKATHON_PLAN.md).
+Learn, practise and recognise Kenyan Sign Language with your own hands. Several apps share one base; see [docs/PLATFORM.md](docs/PLATFORM.md). The Quest app (WebXR, submitted as a hosted link) is the Meta VR Start Developer Competition 2026 entry; see [docs/HACKATHON_PLAN.md](docs/HACKATHON_PLAN.md) (v2, 14 Oct).
 
 | Folder | What's in it | Status |
 |---|---|---|
@@ -24,4 +24,4 @@ node --test sdk/web/ashiria-engine/test/
 dotnet test sdk/unity/com.jarida.ashiria.engine/Tests~/dotnet
 ```
 
-**Data rule:** sign videos show real people. They and anything derived from them stay out of git and out of any cloud service unless the signers have agreed to it. `training/data/`, `training/runs/`, `training/exports/` and `content/packs/` are git-ignored. Synthetic test data (`spec/golden/`) contains no real people.
+**Data rule:** sign videos show real people. The videos stay local, out of git and out of any cloud service. Derived hand poses ship only with permission: the KSL Dictionary's owners have given it (`content/rights.yaml`), and Jerry's own takes are his to publish. `training/data/`, `training/runs/`, `training/exports/` and `content/packs/` are git-ignored. Synthetic test data (`spec/golden/`) contains no real people.
