@@ -108,6 +108,113 @@ namespace Ashiria.Engine
             return seg.Slice(Math.Max(0, first - margin), Math.Min(n, lastIndex + margin + 1));
         }
 
+        /// <summary>Cut the rise from rest and the drop back: keep frames where the dominant wrist is above
+        /// <paramref name="fraction"/> of its own height range. Unchanged if the height range is under 0.3 shoulder widths.</summary>
+        public static Segment ActiveWindow(Segment seg, float fraction = 0.3f, int margin = 2, int minFrames = 6)
+        {
+            int n = seg.Length;
+            int count = 0;
+            double lo = double.PositiveInfinity, hi = double.NegativeInfinity;
+            for (int t = 0; t < n; t++)
+            {
+                if (seg.Present[t, Joints.Dominant] <= 0.5f) continue;
+                count++;
+                double y = seg.WristPos[t, Joints.Dominant].Y;
+                lo = Math.Min(lo, y);
+                hi = Math.Max(hi, y);
+            }
+            if (count < 3 || hi - lo < 0.3) return seg;
+            double threshold = lo + fraction * (hi - lo);
+            int first = -1, last = -1;
+            for (int t = 0; t < n; t++)
+            {
+                if (seg.Present[t, Joints.Dominant] > 0.5f && seg.WristPos[t, Joints.Dominant].Y >= threshold)
+                {
+                    if (first < 0) first = t;
+                    last = t;
+                }
+            }
+            int a = Math.Max(0, first - margin), b = Math.Min(n, last + margin + 1);
+            return b - a >= minFrames ? seg.Slice(a, b) : seg;
+        }
+
+        public const float HoldRadius = 0.12f;
+
+        /// <summary>Frames where the wrist, after a centred 5-frame moving average (zero-padded at the ends),
+        /// stays within <see cref="HoldRadius"/> of its median over the present frames.</summary>
+        public static bool[] HoldFrames(Segment seg, int slot = Joints.Dominant, int smooth = 5)
+        {
+            int n = seg.Length;
+            var hold = new bool[n];
+            int present = 0;
+            for (int t = 0; t < n; t++) if (seg.Present[t, slot] > 0.5f) present++;
+            if (present < 3) return hold;
+
+            var p = new double[n, 3];
+            for (int t = 0; t < n; t++)
+            {
+                var w = seg.WristPos[t, slot];
+                p[t, 0] = w.X; p[t, 1] = w.Y; p[t, 2] = w.Z;
+            }
+            if (n >= smooth)
+            {
+                var s = new double[n, 3];
+                int half = (smooth - 1) / 2;
+                for (int t = 0; t < n; t++)
+                    for (int c = 0; c < 3; c++)
+                    {
+                        double sum = 0;
+                        for (int m = t - half; m <= t + half; m++)
+                            if (m >= 0 && m < n) sum += p[m, c];
+                        s[t, c] = sum / smooth;
+                    }
+                p = s;
+            }
+            var centre = new double[3];
+            var values = new double[present];
+            for (int c = 0; c < 3; c++)
+            {
+                int k = 0;
+                for (int t = 0; t < n; t++) if (seg.Present[t, slot] > 0.5f) values[k++] = p[t, c];
+                centre[c] = Median(values);
+            }
+            for (int t = 0; t < n; t++)
+            {
+                if (seg.Present[t, slot] <= 0.5f) continue;
+                double dx = p[t, 0] - centre[0], dy = p[t, 1] - centre[1], dz = p[t, 2] - centre[2];
+                hold[t] = Math.Sqrt(dx * dx + dy * dy + dz * dz) < HoldRadius;
+            }
+            return hold;
+        }
+
+        /// <summary>The frame in the middle 60% where the dominant wrist moves least (first if tied).</summary>
+        public static int SteadiestFrame(Segment seg)
+        {
+            int n = seg.Length;
+            int lo = (int)(n * 0.2), hi = Math.Max((int)(n * 0.8), (int)(n * 0.2) + 1);
+            int best = -1;
+            double bestSpeed = double.PositiveInfinity;
+            for (int t = Math.Max(lo, 1); t < Math.Min(hi, n); t++)
+            {
+                if (seg.Present[t, Joints.Dominant] <= 0.5f) continue;
+                double speed = (seg.WristPos[t, Joints.Dominant] - seg.WristPos[t - 1, Joints.Dominant]).Length;
+                if (speed < bestSpeed)
+                {
+                    bestSpeed = speed;
+                    best = t;
+                }
+            }
+            return best >= 0 ? best : n / 2;
+        }
+
+        static double Median(double[] values)
+        {
+            var sorted = (double[])values.Clone();
+            Array.Sort(sorted);
+            int m = sorted.Length / 2;
+            return sorted.Length % 2 == 1 ? sorted[m] : 0.5 * (sorted[m - 1] + sorted[m]);
+        }
+
         /// <summary>Resample to exactly <paramref name="n"/> frames: positions interpolate linearly (untracked frames
         /// hold the nearest tracked pose first); presence takes the nearest frame (round half to even).</summary>
         public static Segment Resample(Segment seg, int n)

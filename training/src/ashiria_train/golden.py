@@ -1,7 +1,8 @@
 """`ashiria golden`: engine test vectors from synthetic hands (no real people, so they can be committed).
 
 Each case runs the shared runtime path (mirror → gap fill → trim → resample → features → descriptor)
-and records the expected outputs, plus DTW distances and per-finger errors between cases. The C#
+and records the expected outputs, plus DTW distances and per-finger errors between cases. It also
+records how attempts and references are cut (active window, held frames, steadiest frame). The C#
 (and later Kotlin) ports must reproduce them within the stated tolerances.
 """
 
@@ -12,7 +13,7 @@ import json
 import numpy as np
 
 from . import joints as J
-from .canonical import gap_fill, mirror, resample, trim
+from .canonical import active_window, gap_fill, hold_frames, mirror, resample, steadiest_frame, trim
 from .config import TRAINING_DIR, Config
 from .features import SPEC_VERSION, flexion, sequence_features
 from .matching import descriptor, dtw, finger_errors
@@ -51,6 +52,8 @@ def build_golden(cfg: Config) -> str:
         descriptors.append(desc)
         key = seq_len // 2
         key_flexion.append(flexion(res.hand_rel[key, J.RIGHT]))
+        win = active_window(work)
+        win_res = resample(win, seq_len)
         cases.append({
             "name": spec["name"],
             "mirror": bool(spec.get("mirror", False)),
@@ -63,6 +66,9 @@ def build_golden(cfg: Config) -> str:
             "descriptor": _arr(desc),
             "key_frame": key,
             "key_flexion_dominant": _arr(key_flexion[-1]),
+            "window_length": len(win),
+            "window_hold": hold_frames(win).tolist(),
+            "window_steadiest": steadiest_frame(win_res),
         })
 
     n = len(cases)
@@ -83,5 +89,7 @@ def build_golden(cfg: Config) -> str:
     out = TRAINING_DIR.parent / "spec" / "golden" / f"engine_v{SPEC_VERSION}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(golden))
+    cut = sum(c["window_length"] < c["trimmed_length"] for c in cases)
+    print(f"active window shortened {cut}/{len(cases)} cases")
     print(f"{len(cases)} cases, {len(pairs)} DTW pairs -> {out} ({out.stat().st_size / 1e3:.0f} KB)")
     return str(out)

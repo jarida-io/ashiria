@@ -18,6 +18,29 @@ def test_forward_shape():
     assert out.shape == (3, 7)
 
 
+# Operators the exported SignNet uses, all checked against Unity Sentis 2.6's supported-operator list
+# (14 Oct 2026). A new operator means re-checking Sentis before shipping the model.
+SENTIS_CHECKED = {
+    "Add", "Cast", "Concat", "Constant", "Conv", "Div", "Gather", "Gemm", "Identity", "LayerNormalization",
+    "MatMul", "Mod", "Mul", "ReduceMean", "Reshape", "Shape", "Sigmoid", "Slice", "Softmax", "Sqrt",
+    "Squeeze", "Sub", "Transpose", "Unsqueeze",
+}
+
+
+def test_onnx_uses_only_sentis_checked_ops(tmp_path):
+    onnx = pytest.importorskip("onnx")
+    from ashiria_train.export import OPSET, _to_onnx
+
+    model = SignNet(FEATURE_DIM, 72)
+    model.set_normalization(np.zeros(FEATURE_DIM), np.ones(FEATURE_DIM))
+    file = tmp_path / "m.onnx"
+    _to_onnx(model.eval(), torch.zeros(1, 32, FEATURE_DIM), file)
+    graph = onnx.load(str(file)).graph
+    assert {n.domain for n in graph.node} <= {""}, "contrib/custom operator domains don't load in Sentis"
+    assert {n.op_type for n in graph.node} <= SENTIS_CHECKED
+    assert OPSET <= 25  # Sentis imports opsets 7–25
+
+
 def test_onnx_matches_pytorch(tmp_path):
     pytest.importorskip("onnx")
     ort = pytest.importorskip("onnxruntime")

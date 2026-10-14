@@ -15,3 +15,7 @@ training/data/
 training/runs/
 training/exports/
 training/models/
+
+# .NET build output (engine tests outside Unity)
+bin/
+obj/

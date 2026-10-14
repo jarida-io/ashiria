@@ -65,7 +65,14 @@ A **segment** is a run of frames with, for each frame and hand slot:
 **Known approximations.** Augmentation during training is sized to cover these:
 - the nose versus the centre eye;
 - shoulders versus head yaw;
-- MediaPipe versus Quest joint placement.
+- MediaPipe versus Quest joint placement. In particular, OpenXR's WRIST (1) is the wrist pivot, while MediaPipe's wrist (0) sits at the base of the palm. This shifts wrist-relative coordinates and palm length slightly. If Quest recordings show a systematic offset, spec v2 should build the hand frame from the knuckles (index, middle and pinky MCP) instead of the wrist.
+
+**Frames are verified to match** (14 Oct 2026):
+- MediaPipe hand and pose world landmarks share a right-handed, camera-style frame (x right, y down, z away from the camera). The axes are inferred from MediaPipe's source and confirmed on all 2,548 dictionary clips by `ashiria check`.
+- §4.1 maps that frame onto (signer's right, up, forward); §4.2 builds the same axes from Unity's left-handed world.
+- In both cases a feature component means the same physical direction.
+
+**On Quest, read world-space joint poses only:** `OVRBone.Transform.position` or the Interaction SDK's `IHand.GetJointPose`, never `localPosition`. The Interaction SDK's names for the same 26 indices are `HandWristRoot` (1), `HandThumb1..3`/`HandThumbTip` (2–5), `HandIndex1` (7, the MCP) … `HandPinkyTip` (25).
 
 ## 5. Canonicalisation (shared)
 

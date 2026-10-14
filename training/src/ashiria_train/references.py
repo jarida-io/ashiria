@@ -16,8 +16,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from . import joints as J
-from .canonical import (Segment, active_window, from_mediapipe, gap_fill, left_dominant_votes, mirror, resample,
-                        trim, wrist_extent)
+from .canonical import (Segment, active_window, from_mediapipe, gap_fill, hold_frames, left_dominant_votes, mirror,
+                        resample, steadiest_frame, trim, wrist_extent)
 from .config import Config, path, training_relative
 from .features import SPEC_VERSION, flexion, spread
 from .matching import lookalikes, segment_descriptor
@@ -41,32 +41,9 @@ def names_of(row: pd.Series) -> set[str]:
     return {str(row["label"]).lower()} | {a.strip().lower() for a in aliases.split(";") if a.strip()}
 
 
-def steadiest_frame(seg: Segment) -> int:
-    """The frame in the middle 60% where the dominant wrist moves least: the held handshape."""
-    n = len(seg)
-    lo, hi = int(n * 0.2), max(int(n * 0.8), int(n * 0.2) + 1)
-    speed = np.r_[np.inf, np.linalg.norm(np.diff(seg.wrist_pos[:, J.RIGHT], axis=0), axis=-1)]
-    speed[seg.present[:, J.RIGHT] < 0.5] = np.inf
-    window = speed[lo:hi]
-    return lo + int(np.argmin(window)) if np.isfinite(window).any() else n // 2
-
-
-HOLD_RADIUS = 0.12        # shoulder widths (~4.5 cm): the wrist counts as held within this of its median
 HOLD_SHARE = 0.5          # static if at least this share of the active window is a hold
 OTHER_HAND_EXTENT = 0.2   # shoulder widths: the other hand counts as signing if it moves this much...
 SHAPE_CHANGE = 0.35       # radians: 90th-percentile bend deviation (mean over 15 joints) during the hold
-
-
-def hold_frames(seg: Segment, slot: int = J.RIGHT, smooth: int = 5) -> np.ndarray:
-    """Frames where the (smoothed) wrist stays within HOLD_RADIUS of its median position."""
-    ok = seg.present[:, slot] > 0.5
-    if ok.sum() < 3:
-        return np.zeros(len(seg), bool)
-    p = seg.wrist_pos[:, slot].copy()
-    if len(p) >= smooth:
-        kernel = np.ones(smooth) / smooth
-        p = np.stack([np.convolve(p[:, i], kernel, mode="same") for i in range(3)], axis=1)
-    return ok & (np.linalg.norm(p - np.median(p[ok], axis=0), axis=1) < HOLD_RADIUS)
 
 
 def tag(seg: Segment) -> dict:

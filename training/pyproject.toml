@@ -11,7 +11,7 @@ requires-python = ">=3.10,<3.13"
 dependencies = [
   "numpy>=1.26,<3",
   "opencv-contrib-python>=4.9",
-  "mediapipe>=0.10.14",
+  "mediapipe>=1.1,<1.2",  # 1.x Tasks API; macOS wheels are arm64 only
   "pyyaml>=6",
   "pandas>=2.1",
   "tqdm>=4.66",

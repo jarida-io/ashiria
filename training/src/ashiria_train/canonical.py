@@ -98,6 +98,32 @@ def wrist_extent(seg: Segment, slot: int, smooth: int = 5) -> float:
     return float(np.percentile(np.linalg.norm(p - np.median(p, axis=0), axis=1), 90))
 
 
+HOLD_RADIUS = 0.12  # shoulder widths (~4.5 cm): the wrist counts as held within this of its median
+
+
+def hold_frames(seg: Segment, slot: int = J.RIGHT, smooth: int = 5) -> np.ndarray:
+    """Frames where the wrist, after a centred moving average (zero-padded at the ends, like
+    numpy's convolve 'same'), stays within HOLD_RADIUS of its median over the present frames."""
+    ok = seg.present[:, slot] > 0.5
+    if ok.sum() < 3:
+        return np.zeros(len(seg), bool)
+    p = seg.wrist_pos[:, slot].copy()
+    if len(p) >= smooth:
+        kernel = np.ones(smooth) / smooth
+        p = np.stack([np.convolve(p[:, i], kernel, mode="same") for i in range(3)], axis=1)
+    return ok & (np.linalg.norm(p - np.median(p[ok], axis=0), axis=1) < HOLD_RADIUS)
+
+
+def steadiest_frame(seg: Segment) -> int:
+    """The frame in the middle 60% where the dominant wrist moves least: the held handshape."""
+    n = len(seg)
+    lo, hi = int(n * 0.2), max(int(n * 0.8), int(n * 0.2) + 1)
+    speed = np.r_[np.inf, np.linalg.norm(np.diff(seg.wrist_pos[:, J.RIGHT], axis=0), axis=-1)]
+    speed[seg.present[:, J.RIGHT] < 0.5] = np.inf
+    window = speed[lo:hi]
+    return lo + int(np.argmin(window)) if np.isfinite(window).any() else n // 2
+
+
 def hand_activity(seg: Segment) -> np.ndarray:
     """Per slot: how much a hand is signing = median wrist height + how far it moves (shoulder widths).
     The passive hand rests low; the dominant hand is raised into signing space and moves."""

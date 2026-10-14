@@ -16,12 +16,28 @@ namespace Ashiria.Engine.Tests
         [OneTimeSetUp]
         public void Load()
         {
-            var info = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(EngineParityTests).Assembly);
-            string root = info != null ? info.resolvedPath : Directory.GetCurrentDirectory();
-            string file = Path.GetFullPath(Path.Combine(root, "..", "..", "..", "spec", "golden", "engine_v1.json"));
+            string file = GoldenFile("engine_v1.json");
             Assert.That(File.Exists(file), $"Golden vectors not found at {file}. Run `ashiria golden` in training/.");
             golden = JObject.Parse(File.ReadAllText(file));
             Assert.That((int)golden["spec_version"], Is.EqualTo(Features.SpecVersion));
+        }
+
+        /// <summary>spec/golden/ at the repository root: found from the package location in Unity, or by
+        /// walking up from the test binaries under dotnet.</summary>
+        internal static string GoldenFile(string name)
+        {
+#if UNITY_EDITOR
+            var info = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(EngineParityTests).Assembly);
+            string root = info != null ? info.resolvedPath : Directory.GetCurrentDirectory();
+            return Path.GetFullPath(Path.Combine(root, "..", "..", "..", "spec", "golden", name));
+#else
+            for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
+            {
+                string candidate = Path.Combine(dir.FullName, "spec", "golden", name);
+                if (File.Exists(candidate)) return candidate;
+            }
+            return Path.Combine("spec", "golden", name);
+#endif
         }
 
         static Segment ToSegment(JToken s)
@@ -48,7 +64,9 @@ namespace Ashiria.Engine.Tests
             return seg;
         }
 
-        Segment Run(JToken c, out float[,] features)
+        Segment Run(JToken c, out float[,] features) => Run(c, out features, out _);
+
+        Segment Run(JToken c, out float[,] features, out Segment trimmed)
         {
             var seg = ToSegment(c["segment"]);
             if ((bool)c["mirror"]) seg = Canonical.Mirror(seg);
@@ -56,9 +74,27 @@ namespace Ashiria.Engine.Tests
             seg = Canonical.Trim(seg, (float)golden["rest_height"], (int)golden["trim_margin_frames"]);
             Assert.That(seg, Is.Not.Null);
             Assert.That(seg.Length, Is.EqualTo((int)c["trimmed_length"]), $"{c["name"]}: trimmed length");
+            trimmed = seg;
             var res = Canonical.Resample(seg, (int)golden["seq_len"]);
             features = Features.Sequence(res);
             return res;
+        }
+
+        [Test]
+        public void ActiveWindowHoldAndSteadiestFrameMatch()
+        {
+            foreach (var c in (JArray)golden["cases"])
+            {
+                Run(c, out _, out var trimmed);
+                var win = Canonical.ActiveWindow(trimmed);
+                Assert.That(win.Length, Is.EqualTo((int)c["window_length"]), $"{c["name"]}: window length");
+                var hold = Canonical.HoldFrames(win);
+                var expected = (JArray)c["window_hold"];
+                for (int t = 0; t < expected.Count; t++)
+                    Assert.That(hold[t], Is.EqualTo((bool)expected[t]), $"{c["name"]}: hold[{t}]");
+                var res = Canonical.Resample(win, (int)golden["seq_len"]);
+                Assert.That(Canonical.SteadiestFrame(res), Is.EqualTo((int)c["window_steadiest"]), $"{c["name"]}: steadiest frame");
+            }
         }
 
         static void AssertClose(JArray expected, float[,] actual, double tol, string what)
