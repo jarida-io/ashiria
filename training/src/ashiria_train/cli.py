@@ -67,6 +67,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("clip_id")
     p = steps.add_parser("study-landmarks", help="JSON MediaPipe image landmarks of one dictionary clip")
     p.add_argument("clip_id")
+    p = steps.add_parser("embed-evaluate", help="re-test a trained embed run (report.json, then signs.json)")
+    p.add_argument("--run", help="run folder (default: the newest embed run)")
+    p.add_argument("--attempts", type=int, default=4)
     p = steps.add_parser("embed-signs", help="per-sign results of an embed run, for the sign browser")
     p.add_argument("--run", help="run folder (default: the newest embed run)")
     p.add_argument("--attempts", type=int, default=3)
@@ -152,6 +155,9 @@ def main(argv: list[str] | None = None) -> None:
         import json as _json
         from .study import clip_reference
         print(_json.dumps(clip_reference(args.clip_id)))
+    elif args.step == "embed-evaluate":
+        from .embed import evaluate_run
+        evaluate_run(cfg, args.run, args.attempts)
     elif args.step == "embed-signs":
         from .embed import sign_results
         sign_results(cfg, args.run, args.attempts)

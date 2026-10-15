@@ -158,11 +158,13 @@ def evaluate(model, labels, refs, ref_feats, device, p: EngineParams, aug: dict,
     ref_emb = embed_all(model, ref_feats, device)
     ref_desc = np.stack([segment_descriptor(r, p.weights) for r in refs]).astype(np.float64) if with_dtw else None
     rank_e, rank_d, learned_e, learned_d = [], [], [], []
+    not_cut = 0
     learned = np.array(signs)
     for i in signs:
         for _ in range(attempts):
             att = simulate_attempt(refs[i], rng, aug, p_sim)
             if att is None:
+                not_cut += 1
                 continue
             f = sequence_features(att.hand_rel, att.wrist_pos, att.present, 1.0 / att.fps)
             e = embed_all(model, [f], device)[0]
@@ -178,7 +180,7 @@ def evaluate(model, labels, refs, ref_feats, device, p: EngineParams, aug: dict,
         r = np.array(r)
         return {"top1": float((r == 1).mean()), "top5": float((r <= 5).mean()), "median_rank": float(np.median(r))} if len(r) else {}
 
-    out = {"attempts": len(rank_e), "embedding_all_signs": summary(rank_e),
+    out = {"attempts": len(rank_e), "segmentation_misses": not_cut, "embedding_all_signs": summary(rank_e),
            "embedding_learned_set": float(np.mean(learned_e)) if learned_e else None}
     if with_dtw:
         out["dtw_all_signs"] = summary(rank_d)
@@ -229,28 +231,44 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
             total += float(loss.detach())
         if epoch % 10 == 0 or epoch == epochs - 1:
             print(f"epoch {epoch:3d}  loss {total / max(len(loader), 1):.3f}  ({time.time() - t0:.0f} s)", flush=True)
-    torch.save({"state": model.state_dict(), "labels": labels}, out / "model.pt")
+    torch.save({"state": model.state_dict(), "labels": labels, "epochs": epochs}, out / "model.pt")
+    return evaluate_run(cfg, out, attempts, seed)
+
+
+def evaluate_run(cfg: Config, run: Path | None = None, attempts: int = 4, seed: int = 7) -> Path:
+    """Test a trained run on simulated attempts against DTW (report.json), then per sign (signs.json)."""
+    run = Path(run) if run else latest_run(cfg)
+    p = recogniser_params(EngineParams.from_config(cfg))
+    labels, refs, _ = load_references(p)
+    ref_feats = [sequence_features(r.hand_rel, r.wrist_pos, r.present, 1.0 / r.fps) for r in refs]
+    device = pick_device(str(cfg.train.device))
+    model = _load_model(cfg, run, ref_feats[0].shape[-1], device)
+    vocab = [line.split("#")[0].strip() for line in open("configs/vocabulary_v1.txt") if line.split("#")[0].strip()]
+    index = {lab: k for k, lab in enumerate(labels)}
+    chosen = [index[w] for w in vocab if w in index] + [index[w + " 1"] for w in vocab if w not in index and w + " 1" in index]
+    rng = np.random.default_rng(seed)
+    others = [int(k) for k in rng.choice(len(refs), 100, replace=False) if int(k) not in chosen]
 
     print("Evaluating on simulated attempts...")
     report = {
         "note": "one signer, simulated variation: robustness to augmentation, not accuracy on other people",
         "cut": "whole signs: an attempt ends when the hands drop (up to 10 s), not at a hold",
-        "references": len(refs), "epochs": epochs,
+        "references": len(refs),
         "vocabulary": evaluate(model, labels, refs, ref_feats, device, p, dict(cfg.calibrate.augment), chosen, attempts, seed),
         "other_signs": evaluate(model, labels, refs, ref_feats, device, p, dict(cfg.calibrate.augment), others, 2, seed + 1),
         # Harder: the training augmentations (bigger rotations, more jitter) plus finger noise.
         "vocabulary_hard": evaluate(model, labels, refs, ref_feats, device, p,
                                     {**dict(cfg.train.augment), "finger_noise_rad": 0.15}, chosen, attempts, seed + 2),
     }
-    (out / "report.json").write_text(json.dumps(report, indent=1))
+    (run / "report.json").write_text(json.dumps(report, indent=1))
     for name in ("vocabulary", "other_signs", "vocabulary_hard"):
         r = report[name]
-        print(f"{name}: {r['attempts']} attempts | among all {len(refs)} signs: embedding top-1 "
+        print(f"{name}: {r['attempts']} attempts ({r['segmentation_misses']} not cut) | among all {len(refs)} signs: embedding top-1 "
               f"{r['embedding_all_signs'].get('top1', 0):.0%} top-5 {r['embedding_all_signs'].get('top5', 0):.0%}, "
               f"DTW top-1 {r['dtw_all_signs'].get('top1', 0):.0%} top-5 {r['dtw_all_signs'].get('top5', 0):.0%}")
-    print(f"-> {out}")
-    sign_results(cfg, out)
-    return out
+    print(f"-> {run}")
+    sign_results(cfg, run)
+    return run
 
 
 def latest_run(cfg: Config) -> Path | None:

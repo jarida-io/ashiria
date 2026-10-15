@@ -44,9 +44,11 @@ LOOKALIKES = 3
 MAX_WRONG, MAX_FALSE_ACCEPT = 0.05, 0.10
 
 
-def simulated_stream(seg: Segment, rng: np.random.Generator, aug: dict, tick_hz: float) -> Segment:
+def simulated_stream(seg: Segment, rng: np.random.Generator, aug: dict, tick_hz: float,
+                     drop_after_hold: bool = False) -> Segment:
     """A take as someone else might sign it, at the headset tick rate, with a rise from rest before it and
-    either a drop back to rest or a long hold after it."""
+    either a drop back to rest or a long hold after it. `drop_after_hold`: the hold is followed by a drop too, as
+    when the segmenter doesn't end attempts at a hold (the recogniser's whole signs) and the signer lowers their hands."""
     seg = augment(seg, rng, aug)
     n = max(8, int(round((len(seg) - 1) / seg.fps * tick_hz)) + 1)
     seg = resample(seg, n)
@@ -66,9 +68,10 @@ def simulated_stream(seg: Segment, rng: np.random.Generator, aug: dict, tick_hz:
     parts = [frames(seg.hand_rel[0], [rest_first] * 10),
              frames(seg.hand_rel[0], [rest_first + (first - rest_first) * (i + 1) / (rise + 1) for i in range(rise)]),
              seg]
-    if rng.random() < 0.3:
+    held = rng.random() < 0.3
+    if held:
         parts.append(frames(seg.hand_rel[-1], [last] * 25))  # holds the end of the sign
-    else:
+    if not held or drop_after_hold:
         drop = int(rng.integers(5, 11))
         parts.append(frames(seg.hand_rel[-1], [last + (rest_last - last) * (i + 1) / drop for i in range(drop)]
                             + [rest_last] * 10))
@@ -79,7 +82,7 @@ def simulated_stream(seg: Segment, rng: np.random.Generator, aug: dict, tick_hz:
 def simulate_attempt(take_seg: Segment, rng, aug: dict, p: EngineParams) -> Segment | None:
     """One prepared attempt, or None if the segmenter did not fire (a segmentation miss)."""
     sp = p.segmenter
-    attempts = segment_stream(sp, simulated_stream(take_seg, rng, aug, sp.tick_hz))
+    attempts = segment_stream(sp, simulated_stream(take_seg, rng, aug, sp.tick_hz, drop_after_hold=sp.hold_s >= sp.max_attempt_s))
     return prepare(attempts[0].segment, p, sp.rest_height) if attempts else None
 
 
