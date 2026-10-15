@@ -16,6 +16,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from . import joints as J
+from .augment import camera_view
 from .canonical import (Segment, active_window, from_mediapipe, gap_fill, hold_frames, left_dominant_votes, mirror,
                         steadiest_frame, trim, wrist_extent)
 from .config import Config, path, training_relative
@@ -129,6 +130,18 @@ def tag(seg: Segment) -> dict:
     }
 
 
+# Extra takes per course sign, as a webcam would see it from beside, below or above (yaw, pitch degrees; depth
+# along the line of sight squashed a quarter): checks then accept those viewpoints too.
+VIEW_TAKES = [(-25, 0), (25, 0), (0, -18), (0, 18)]
+
+
+def _view_take(seg: Segment, key: int, yaw: float, pitch: float) -> dict:
+    hand_rel, wrist_pos = camera_view(seg.hand_rel, seg.wrist_pos, yaw, pitch, depth=0.75, wrist_depth=0.9)
+    hand_rel = (hand_rel - hand_rel[:, :, :1]) * seg.present[:, :, None, None]
+    return {"view": [yaw, pitch], "fps": seg.fps, "hand_rel": np.round(hand_rel, 5).tolist(),
+            "wrist_pos": np.round(wrist_pos, 4).tolist(), "present": seg.present.tolist(), "key_frame": key}
+
+
 def build_references(cfg: Config, vocab_file: str | Path | None = None) -> Path:
     manifest = pd.read_csv(path(cfg, "manifests") / "videos.csv", dtype=str)
     manifest = manifest[manifest["label"].notna()]
@@ -205,6 +218,7 @@ def build_references(cfg: Config, vocab_file: str | Path | None = None) -> Path:
             "wrist_pos": np.round(seg.wrist_pos, 4).tolist(),
             "present": seg.present.tolist(),
             "key_frame": key,
+            "views": [_view_take(seg, key, *v) for v in VIEW_TAKES],
         })
     (out / "references.json").write_text(json.dumps({
         "spec_version": SPEC_VERSION,

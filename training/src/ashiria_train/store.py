@@ -45,7 +45,10 @@ def load_dictionary(file: str | Path = DICTIONARY) -> dict[str, SignSource]:
     out = {}
     for s in json.loads(file.read_text())["signs"]:
         take = Take(segment_from_json(s), int(s["key_frame"]), "ksl_dictionary", take_id=f"dict-{s['clip_id']}")
-        out[s["word"]] = SignSource("ksl_dictionary", [take], s["tags"], ["ksl-dictionary"])
+        # The same take as other camera viewpoints would see it (references.VIEW_TAKES); the shadow stays the first.
+        views = [Take(segment_from_json(v), int(v["key_frame"]), "ksl_dictionary", take_id=f"dict-{s['clip_id']}-view{k}")
+                 for k, v in enumerate(s.get("views", []))]
+        out[s["word"]] = SignSource("ksl_dictionary", [take, *views], s["tags"], ["ksl-dictionary"])
     return out
 
 

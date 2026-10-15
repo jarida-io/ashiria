@@ -156,9 +156,19 @@ def training_variation(cfg: Config) -> list[dict]:
     """What the recogniser trains on: half mild variation (the calibration's "someone else", which the normal test
     uses) and half stronger. The stronger half stops short of the harder test (15 degree turns, 0.006 m jitter,
     0.15 rad finger noise), so that test still asks for more than training showed."""
-    mild = {**dict(cfg.calibrate.augment), "edge_crop": 0.1}
-    stronger = {**dict(cfg.train.augment), "rotate_deg": 12.0, "joint_noise_m": 0.005, "finger_noise_rad": 0.13}
+    mild = {**dict(cfg.calibrate.augment), "edge_crop": 0.1, **VIEW_MILD}
+    stronger = {**dict(cfg.train.augment), "rotate_deg": 12.0, "joint_noise_m": 0.005, "finger_noise_rad": 0.13, **VIEW_STRONG}
     return [mild, stronger]
+
+
+# Camera viewpoints (augment.camera_view): a webcam beside, above or below the signer misjudges depth along its line
+# of sight and the hand's tilt. Training sees these; the viewpoint test goes further (wider angles, bigger errors).
+VIEW_MILD = {"view_prob": 0.5, "view_yaw_deg": 25, "view_pitch_deg": 15, "view_depth": [0.7, 1.1], "view_depth_noise_m": 0.003,
+             "view_tilt_deg": 6, "view_wrist_depth": 0.1}
+VIEW_STRONG = {"view_prob": 0.8, "view_yaw_deg": 35, "view_pitch_deg": 25, "view_depth": [0.55, 1.2], "view_depth_noise_m": 0.004,
+               "view_tilt_deg": 12, "view_wrist_depth": 0.15}
+VIEW_TEST = {"view_prob": 1.0, "view_yaw_deg": 40, "view_pitch_deg": 30, "view_depth": [0.5, 1.25], "view_depth_noise_m": 0.005,
+             "view_tilt_deg": 15, "view_wrist_depth": 0.2}
 
 
 def nt_xent(a: torch.Tensor, b: torch.Tensor, temperature: float) -> torch.Tensor:
@@ -305,9 +315,12 @@ def evaluate_run(cfg: Config, run: Path | None = None, attempts: int = 4, seed: 
         "vocabulary_hard": evaluate(model, labels, refs, ref_feats, device, p,
                                     {**dict(cfg.train.augment), "finger_noise_rad": 0.15}, chosen, attempts, seed + 2,
                                     p_dtw, dtw_refs),
+        # Viewpoint: the normal variation, seen by a camera up to 40 degrees off to the side and 30 above or below.
+        "vocabulary_viewpoint": evaluate(model, labels, refs, ref_feats, device, p, {**dict(cfg.calibrate.augment), **VIEW_TEST},
+                                         chosen, attempts, seed + 3, p_dtw, dtw_refs),
     }
     (run / "report.json").write_text(json.dumps(report, indent=1))
-    for name in ("vocabulary", "other_signs", "vocabulary_hard"):
+    for name in ("vocabulary", "other_signs", "vocabulary_hard", "vocabulary_viewpoint"):
         r = report[name]
         print(f"{name}: {r['attempts']} attempts ({r['segmentation_misses']} not cut) | among all {len(refs)} signs: embedding top-1 "
               f"{r['embedding_all_signs'].get('top1', 0):.0%} top-5 {r['embedding_all_signs'].get('top5', 0):.0%}, "
@@ -359,7 +372,8 @@ def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: 
     v1 = {index[w] if w in index else index.get(w + " 1") for w in vocab} - {None}
     ref_desc = np.stack([segment_descriptor(r, p_dtw.weights) for r in dtw_refs]).astype(np.float64)
     p_sim = dataclasses.replace(p, segmenter=dataclasses.replace(p.segmenter, rest_height=VIDEO_REST_HEIGHT))
-    tests = {"normal": dict(cfg.calibrate.augment), "harder": {**dict(cfg.train.augment), "finger_noise_rad": 0.15}}
+    tests = {"normal": dict(cfg.calibrate.augment), "harder": {**dict(cfg.train.augment), "finger_noise_rad": 0.15},
+             "viewpoint": {**dict(cfg.calibrate.augment), **VIEW_TEST}}
     summary = {}
     for k, (name, aug) in enumerate(tests.items()):
         rng = np.random.default_rng((seed, k))
@@ -402,7 +416,7 @@ def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: 
     report = json.loads((run / "report.json").read_text()) if (run / "report.json").exists() else {}
     out = {"run": run.name, "trained_on": trained_on, "signs": len(refs), "attempts_per_sign": attempts, "frames": p.seq_len,
            "note": "one signer, simulated variation: robustness to variation, not accuracy on other people",
-           "summary": summary, "report": {k: report[k] for k in ("vocabulary", "other_signs", "vocabulary_hard") if k in report},
+           "summary": summary, "report": {k: report[k] for k in ("vocabulary", "other_signs", "vocabulary_hard", "vocabulary_viewpoint") if k in report},
            "results": results}
     (run / "signs.json").write_text(json.dumps(out, separators=(",", ":")))
     print(f"-> {run / 'signs.json'}")
