@@ -167,7 +167,10 @@ def clip_pose(clip_id: str) -> dict | None:
     dcfg = load_config(DICTIONARY_CONFIG)
     with np.load(path(dcfg, "landmarks") / f"{clip_id}.npz") as d:
         seg, _ = from_mediapipe(d)
-        body = body_points(d, [J.POSE_RIGHT_SHOULDER, J.POSE_LEFT_SHOULDER, 14, 13, 24, 23])  # shoulders, elbows, hips
+        # Shoulders, elbows, hips (signer's right first), then the face: nose, left and right eye, left and right ear,
+        # left and right corner of the mouth.
+        body = body_points(d, [J.POSE_RIGHT_SHOULDER, J.POSE_LEFT_SHOULDER, 14, 13, 24, 23, J.POSE_NOSE, 2, 5,
+                               J.POSE_LEFT_EAR, J.POSE_RIGHT_EAR, 9, 10])
     if seg is None or body is None:
         return None
     seg = gap_fill(seg, dcfg.features.gap_fill_frames)
@@ -176,10 +179,19 @@ def clip_pose(clip_id: str) -> dict | None:
         pad = np.concatenate([x[:1].repeat(k // 2, 0), x, x[-1:].repeat(k // 2, 0)])
         return np.mean([pad[i:i + len(x)] for i in range(k)], axis=0)
 
+    # Hands: average each frame with its neighbours where all three see the hand, which takes the jitter out of the
+    # fingers without blurring a handshape change.
+    hand_rel = seg.hand_rel.copy()
+    seen = seg.present > 0.5
+    for s in range(2):
+        mid = np.flatnonzero(seen[1:-1, s] & seen[:-2, s] & seen[2:, s]) + 1
+        hand_rel[mid, s] = (seg.hand_rel[mid - 1, s] + seg.hand_rel[mid, s] + seg.hand_rel[mid + 1, s]) / 3
+
     r = lambda a, n: np.round(a, n).tolist()
     return {"fps": float(seg.fps), "frames": len(seg), "present": seg.present.astype(int).tolist(),
-            "hand_rel": r(seg.hand_rel, 4), "wrist_pos": r(smooth(seg.wrist_pos), 3),
-            "shoulders": r(smooth(body[:, 0:2]), 3), "elbows": r(smooth(body[:, 2:4]), 3), "hips": r(smooth(body[:, 4:6]), 3)}
+            "hand_rel": r(hand_rel, 4), "wrist_pos": r(smooth(seg.wrist_pos), 3),
+            "shoulders": r(smooth(body[:, 0:2]), 3), "elbows": r(smooth(body[:, 2:4]), 3), "hips": r(smooth(body[:, 4:6]), 3),
+            "face": r(smooth(body[:, 6:13], 5), 3)}
 
 
 def clip_landmarks(clip_id: str) -> dict:

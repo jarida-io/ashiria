@@ -146,7 +146,7 @@ let index = [], shown = [], listed = 0, current = null, raf = 0;
 let rec = null;            // recogniser results (ashiria embed-signs), or null
 // Avatar (dev/avatar.js, loaded as a module after this script) or the dictionary video, remembered per browser.
 let mode = (() => { try { return localStorage.getItem('ashiria.browse.mode') || 'avatar'; } catch { return 'avatar'; } })();
-let avView = 'front', avMirror = false;
+let avView = 'front', avMirror = false, avPath = false;
 const avatarReady = new Promise((resolve) => addEventListener('avatar-ready', () => resolve(window.ashiriaAvatar), { once: true }));
 document.body.classList.add(`mode-${mode}`);
 const byClip = new Map();  // clip_id -> first index entry, to name the signs the recogniser mentions
@@ -297,6 +297,7 @@ async function open(x, push = true) {
           <option value="front">Facing you</option><option value="hands">Hands close-up</option><option value="side">From the side</option><option value="yours">Your view</option>
         </select>
         <label><input type="checkbox" id="av-mirror" /> Mirror</label>
+        <label><input type="checkbox" id="av-path" /> Hand paths</label>
       </span>
       <span class="group video-only">
         <label><input type="checkbox" id="hands" checked /> Hands</label>
@@ -311,7 +312,7 @@ async function open(x, push = true) {
           <div class="avatar-host" id="avatar-host"></div></div>
         <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Position in the sign" />
         <div class="cap"><span class="video-only">Dictionary video with MediaPipe landmarks. <span class="legend"><span style="background:${COLORS[0]}"></span>signer's right<span style="background:${COLORS[1]}"></span>left</span></span>
-          <span class="avatar-only">Avatar signing from the video's landmarks: arms, hands and fingers, not the face. Drag to turn it. Palms are the paler side.
+          <span class="avatar-only">Avatar signing from the video's landmarks: arms, hands, fingers and head movement, not facial expression. Drag to turn it. Palms are paler; nails mark the backs of the fingers.
             <span class="legend"><span style="background:${COLORS[0]}"></span>signer's right<span style="background:${COLORS[1]}"></span>left</span></span></div></div>
       <div><div class="stage ref"><canvas id="ref"></canvas></div>
         <div class="cap" id="refcap">Reference hands Ashiria would cut from this clip, facing you like the video.</div></div>
@@ -350,6 +351,8 @@ async function open(x, push = true) {
   $('av-mirror').checked = avMirror;
   $('av-view').addEventListener('change', () => { avView = $('av-view').value; window.ashiriaAvatar?.setView(avView); });
   $('av-mirror').addEventListener('change', () => { avMirror = $('av-mirror').checked; window.ashiriaAvatar?.setMirror(avMirror); });
+  $('av-path').checked = avPath;
+  $('av-path').addEventListener('change', () => { avPath = $('av-path').checked; window.ashiriaAvatar?.setPath(avPath); });
   const [lmRes, refRes, poseRes] = await Promise.all([fetch(`/dev/study/landmarks/${x.clip_id}`),
     fetch(`/dev/study/reference/${x.clip_id}`), fetch(`/dev/study/pose/${x.clip_id}`)]);
   if (current !== x) return;
@@ -364,6 +367,7 @@ async function open(x, push = true) {
     avatar = av;
     av.setMirror(avMirror);
     av.setView(avView);
+    av.setPath(avPath);
     av.setPose(pose);
     if (mode === 'avatar') av.mount($('avatar-host'));
   });
