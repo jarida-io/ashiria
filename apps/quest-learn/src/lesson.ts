@@ -2,7 +2,7 @@
  * The lesson loop: practise the target sign (Verify), Free Sign (Recognise among learned signs), or Studio
  * (development: save the team's takes). Drives the lesson panel and the shadow-hand highlights.
  */
-import { hintText, lookalikesOf, prepare, recognise, restHeight, verify, type Attempt } from '@ashiria/engine';
+import { COUNT, hintText, lookalikesOf, prepare, recognise, restHeight, verify, type Attempt, type Segment } from '@ashiria/engine';
 import { createSystem, FollowBehavior, Follower, RayInteractable, VisibilityState, type UIKitMLAsset } from '@iwsdk/core';
 import { app, STUDIO_ENABLED } from './app-state.js';
 import { currentStreak, masteryText, unitSummary } from './flow.js';
@@ -14,6 +14,17 @@ const UI_GUARD_MS = 700;        // an attempt that starts this soon after a pane
 const REST_WAIT_S = 1.0, REST_SAMPLE_S = 2.0;
 // Tolerance scales. "Very easy" is for webcam previews, which see hands less precisely than a headset.
 const STRICTNESS = [[0.85, 'Strict'], [1, 'Normal'], [1.25, 'Relaxed'], [1.5, 'Easy'], [2, 'Very easy']] as const;
+
+/** Only the signing hand: for a one-handed sign (every letter, most words) the other hand is no part of it, however
+ * it rests. Without this a visible resting hand would count against the attempt. */
+function signingHandOnly(seg: Segment): Segment {
+  const present = seg.present.slice(), handRel = seg.handRel.slice();
+  for (let t = 0; t < seg.length; t++) {
+    present[t * 2 + 1] = 0;
+    handRel.fill(0, (t * 2 + 1) * COUNT * 3, (t * 2 + 2) * COUNT * 3);
+  }
+  return { ...seg, present, handRel };
+}
 
 type Element = { setProperties(p: Record<string, unknown>): void; addEventListener(t: string, f: () => void): void; removeEventListener(t: string, f: () => void): void };
 
@@ -199,7 +210,8 @@ export class LessonSystem extends createSystem({}) {
     if (!info) return;
     const sign = app.pack.signs.get(info.id);
     if (!sign) return;
-    const r = verify(prepared, sign, p, app.settings.strictness, lookalikesOf(app.pack, info.id));
+    const attemptSeg = info.tags.hands === 'one' ? signingHandOnly(prepared) : prepared;
+    const r = verify(attemptSeg, sign, p, app.settings.strictness, lookalikesOf(app.pack, info.id));
 
     if (app.mode === 'studio') {
       void saveTake(sampler, attempt, info.id).then(

@@ -69,6 +69,33 @@ OTHER_HAND_EXTENT = 0.2   # shoulder widths: the other hand counts as signing if
 SHAPE_CHANGE = 0.35       # radians: 90th-percentile bend deviation (mean over 15 joints) during the hold
 
 
+def hand_lifts(seg: Segment) -> np.ndarray:
+    """How far each hand rises above its own resting height (shoulder widths): its 95th percentile height minus its
+    10th, over the frames that see it. The dictionary signer rests the spare hand at the stomach, visible and
+    jittering, so taking part in a sign means rising well above that, not just being seen."""
+    out = np.zeros(2)
+    for s in (J.RIGHT, J.LEFT):
+        y = seg.wrist_pos[seg.present[:, s] > 0.5, s, 1]
+        if y.size >= 3:
+            out[s] = np.percentile(y, 95) - np.percentile(y, 10)
+    return out
+
+
+def two_handed(seg: Segment) -> bool:
+    """Both hands sign: the other hand lifts at least 0.4 shoulder widths, and nearly half as much as the right."""
+    lift = hand_lifts(seg)
+    return bool(lift[J.LEFT] > 0.4 and lift[J.LEFT] > 0.45 * lift[J.RIGHT])
+
+
+def one_handed(seg: Segment) -> Segment:
+    """The segment without the left hand, for a one-handed sign: its resting hand is no part of the sign."""
+    present = seg.present.copy()
+    hand_rel = seg.hand_rel.copy()
+    present[:, J.LEFT] = 0
+    hand_rel[:, J.LEFT] = 0
+    return Segment(hand_rel, seg.wrist_pos, present, seg.fps)
+
+
 def tag(seg: Segment) -> dict:
     """Hints computed on the active signing window (rise from and drop to rest removed)."""
     full_dom = seg.present[:, J.RIGHT] > 0.5
@@ -89,7 +116,7 @@ def tag(seg: Segment) -> dict:
     height = win.wrist_pos[dom, J.RIGHT, 1]
     static = hold_share >= HOLD_SHARE
     return {
-        "hands": "two" if other.mean() > 0.5 and (other_extent > OTHER_HAND_EXTENT or other_raised) else "one",
+        "hands": "two" if other.mean() > 0.5 and two_handed(seg) else "one",
         "movement": ("handshape change" if shape_change > SHAPE_CHANGE else "static") if static else "moving",
         "near_face": bool(height.size and np.percentile(height, 90) > -0.4),
         "hands_close": bool(both.any() and np.percentile(gap[both], 10) < 0.3),
@@ -155,7 +182,13 @@ def build_references(cfg: Config, vocab_file: str | Path | None = None) -> Path:
             missing.append(word)
             continue
         row = by_clip.loc[clip]
-        seg = cut_reference(segments[clip], p, f.rest_height)
+        full = segments[clip]
+        lift = hand_lifts(full)
+        if lift[J.LEFT] > 1.3 * lift[J.RIGHT]:
+            full = mirror(full)  # this clip is signed with the left hand: teach it right-handed, like the rest
+        seg = cut_reference(full, p, f.rest_height)
+        if tag(full)["hands"] == "one":
+            seg = one_handed(seg)  # the spare hand rests at the stomach: not part of the sign
         key = steadiest_frame(seg)
         descriptors.append(segment_descriptor(seg))
         signs.append({
@@ -166,7 +199,7 @@ def build_references(cfg: Config, vocab_file: str | Path | None = None) -> Path:
             "description": _text(row.get("description")),
             "note": _text(row.get("note")),
             "clip_id": clip,
-            "tags": tag(segments[clip]),
+            "tags": tag(full),
             "fps": seg.fps,
             "hand_rel": np.round(seg.hand_rel, 5).tolist(),
             "wrist_pos": np.round(seg.wrist_pos, 4).tolist(),
