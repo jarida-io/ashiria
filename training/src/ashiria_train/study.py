@@ -188,10 +188,13 @@ def clip_pose(clip_id: str) -> dict | None:
         hand_rel[mid, s] = (seg.hand_rel[mid - 1, s] + seg.hand_rel[mid, s] + seg.hand_rel[mid + 1, s]) / 3
 
     r = lambda a, n: np.round(a, n).tolist()
-    return {"fps": float(seg.fps), "frames": len(seg), "present": seg.present.astype(int).tolist(),
+    pose = {"fps": float(seg.fps), "frames": len(seg), "present": seg.present.astype(int).tolist(),
             "hand_rel": r(hand_rel, 4), "wrist_pos": r(smooth(seg.wrist_pos), 3),
             "shoulders": r(smooth(body[:, 0:2]), 3), "elbows": r(smooth(body[:, 2:4]), 3), "hips": r(smooth(body[:, 4:6]), 3),
             "face": r(smooth(body[:, 6:13], 5), 3)}
+    from .steps import sign_steps
+    pose["learn"] = sign_steps(pose)
+    return pose
 
 
 def clip_landmarks(clip_id: str) -> dict:
