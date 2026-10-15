@@ -132,22 +132,33 @@ def _cut_references(p: EngineParams, dcfg) -> tuple[list[str], list[Segment], li
 
 
 class Views(Dataset):
-    """Two augmented views of each reference, as feature sequences."""
+    """Two augmented views of each reference, as feature sequences. Each view draws its variation from one of `augs`
+    at random (mild and stronger: see `training_variation`)."""
 
-    def __init__(self, refs: list[Segment], aug: dict, seq_len: int, seed: int):
-        self.refs, self.aug, self.seq_len, self.seed = refs, aug, seq_len, seed
+    def __init__(self, refs: list[Segment], augs: list[dict], seq_len: int, seed: int):
+        self.refs, self.augs, self.seq_len, self.seed = refs, augs, seq_len, seed
         self.epoch = 0
 
     def __len__(self) -> int:
         return len(self.refs)
 
     def view(self, seg: Segment, rng) -> np.ndarray:
-        s = resample(active_window(gap_fill(augment(seg, rng, self.aug), 5)), self.seq_len)
+        aug = self.augs[int(rng.integers(len(self.augs)))]
+        s = resample(active_window(gap_fill(augment(seg, rng, aug), 5)), self.seq_len)
         return sequence_features(s.hand_rel, s.wrist_pos, s.present, 1.0 / s.fps)
 
     def __getitem__(self, i: int):
         rng = np.random.default_rng((self.seed, self.epoch, i))
         return torch.from_numpy(self.view(self.refs[i], rng)), torch.from_numpy(self.view(self.refs[i], rng))
+
+
+def training_variation(cfg: Config) -> list[dict]:
+    """What the recogniser trains on: half mild variation (the calibration's "someone else", which the normal test
+    uses) and half stronger. The stronger half stops short of the harder test (15 degree turns, 0.006 m jitter,
+    0.15 rad finger noise), so that test still asks for more than training showed."""
+    mild = {**dict(cfg.calibrate.augment), "edge_crop": 0.1}
+    stronger = {**dict(cfg.train.augment), "rotate_deg": 12.0, "joint_noise_m": 0.005, "finger_noise_rad": 0.13}
+    return [mild, stronger]
 
 
 def nt_xent(a: torch.Tensor, b: torch.Tensor, temperature: float) -> torch.Tensor:
@@ -225,8 +236,7 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
     t0 = time.time()
     labels, refs, _ = load_references(p)
     print(f"{len(refs)} dictionary references ({time.time() - t0:.0f} s)")
-    aug = {**dict(cfg.calibrate.augment), "edge_crop": 0.1}
-    data = Views(refs, aug, p.seq_len, seed)
+    data = Views(refs, training_variation(cfg), p.seq_len, seed)
     ref_feats = [sequence_features(r.hand_rel, r.wrist_pos, r.present, 1.0 / r.fps) for r in refs]
     stack = np.stack(ref_feats).reshape(-1, ref_feats[0].shape[-1])
     device = pick_device(str(cfg.train.device))
@@ -261,7 +271,8 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
             total += float(loss.detach())
         if epoch % 10 == 0 or epoch == epochs - 1:
             print(f"epoch {epoch:3d}  loss {total / max(len(loader), 1):.3f}  ({time.time() - t0:.0f} s)", flush=True)
-    torch.save({"state": model.state_dict(), "labels": labels, "epochs": epochs}, out / "model.pt")
+    torch.save({"state": model.state_dict(), "labels": labels, "epochs": epochs, "frames": p.seq_len,
+                "variation": training_variation(cfg)}, out / "model.pt")
     return evaluate_run(cfg, out, attempts, seed)
 
 
