@@ -6,6 +6,7 @@ import { COUNT, hintText, lookalikesOf, prepare, recognise, restHeight, verify, 
 import { createSystem, FollowBehavior, Follower, RayInteractable, VisibilityState, type UIKitMLAsset } from '@iwsdk/core';
 import { app, STUDIO_ENABLED } from './app-state.js';
 import { currentStreak, masteryText, unitSummary } from './flow.js';
+import { AvatarCoachSystem } from './avatar-coach.js';
 import { HandSamplerSystem } from './hand-sampler.js';
 import { ShadowHandsSystem } from './shadow-hands.js';
 import { saveTake } from './studio.js';
@@ -46,7 +47,7 @@ export class LessonSystem extends createSystem({}) {
     panelEntity?.addComponent(Follower, {
       target: this.player.head, offsetPosition: [-0.3, -0.28, -0.48], behavior: FollowBehavior.PivotY,
     });
-    for (const id of ['unit', 'gloss', 'mastery', 'mode', 'status', 'hint', 'info', 'mode-label', 'hand-label', 'strict-label',
+    for (const id of ['unit', 'gloss', 'mastery', 'mode', 'step', 'status', 'hint', 'info', 'mode-label', 'hand-label', 'strict-label',
       'delete-label', 'preview-label', 'rest-label', 'btn-prev', 'btn-next', 'btn-mode', 'btn-rest', 'btn-hand', 'btn-strict',
       'btn-delete', 'btn-preview', 'xr-button', 'exit-button'])
       this.el[id] = panel.getElementById(id) as unknown as Element | null;
@@ -114,6 +115,7 @@ export class LessonSystem extends createSystem({}) {
     this.cleanupFuncs.push(() => el.removeEventListener('click', handler));
   }
 
+  private stepCaption = '';
   private set(id: string, text: string): void { this.el[id]?.setProperties({ text }); }
   private say(status: string, hint: string): void { this.set('status', status); this.set('hint', hint); }
   private gloss = (id: string) => app.pack?.catalogue.find((s) => s.id === id)?.gloss;
@@ -153,6 +155,8 @@ export class LessonSystem extends createSystem({}) {
 
   update(delta: number, time: number): void {
     this.now = time;
+    const caption = (this.world.getSystem(AvatarCoachSystem) as AvatarCoachSystem | undefined)?.caption ?? '';
+    if (caption !== this.stepCaption) { this.stepCaption = caption; this.set('step', caption); }
     const sampler = this.world.getSystem(HandSamplerSystem) as HandSamplerSystem | undefined;
     if (this.calibrating && sampler && time >= this.calibrating.start) {
       const f = sampler.lastFrame;

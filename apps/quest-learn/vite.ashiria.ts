@@ -9,8 +9,8 @@
  * - /dev/study: the study sheet (dev/study.html): each sign's local dictionary video next to its reference hands,
  *   with Approve / Reject buttons that run `ashiria approve`. /dev/study/browse: every sign in the dictionary's data
  *   sheet, with MediaPipe's landmarks drawn over its video, the reference Ashiria would cut from it, audit flags and
- *   the recogniser's results (signs.json of the newest training/runs/embed- run), and an avatar (dev/avatar.js)
- *   that signs each clip from its landmarks. The videos never leave this Mac.
+ *   the recogniser's results (signs.json of the newest training/runs/embed- run), and an avatar (src/avatar) that
+ *   signs each clip from its landmarks, step by step in Learn mode. The videos never leave this Mac.
  * - /web: the web app (web.html), a camera instead of a headset; /dev/recogniser/* and /dev/mediapipe/* serve its
  *   recogniser (training/exports/recogniser) and MediaPipe's models (training/models/mediapipe).
  *
@@ -147,7 +147,6 @@ export function ashiriaDev(): Plugin {
             }
             return send(res, 200, landmarkCache.get(lm[1]) as string);
           }
-          if (url === '/avatar.js') return send(res, 200, readFileSync(join(__dirname, 'dev/avatar.js'), 'utf8'), 'text/javascript');
           const pose = /^\/pose\/([a-f0-9]+)$/.exec(url);
           if (pose) {
             if (!poseCache.has(pose[1])) {
@@ -200,6 +199,19 @@ export function ashiriaDev(): Plugin {
         const url = (req.url ?? '/').split('?')[0];
         if (url !== '/' && url !== '') return next();
         return send(res, 200, readFileSync(join(__dirname, 'web.html'), 'utf8'), 'text/html');
+      });
+      // The avatar coach in the app: a catalogue sign's pose and steps (`ashiria study-avatar`), dev only.
+      const avatarCache = new Map<string, string>();
+      server.middlewares.use('/dev/avatar', async (req, res) => {
+        const id = decodeURIComponent((req.url ?? '/').split('?')[0].replace(/^\//, ''));
+        if (!SAFE.test(id)) return send(res, 400, { error: 'bad sign id' });
+        try {
+          if (!avatarCache.has(id)) avatarCache.set(id, await ashiria(['study-avatar', id]));
+          const text = avatarCache.get(id) as string;
+          return text.trim() === 'null' ? send(res, 404, { error: 'no avatar for this sign' }) : send(res, 200, text);
+        } catch (err) {
+          return send(res, 500, { error: String(err) });
+        }
       });
       server.middlewares.use('/dev/recogniser', (req, res) => {
         const name = (req.url ?? '/').split('?')[0].replace(/^\//, '');

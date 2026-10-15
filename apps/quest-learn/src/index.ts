@@ -9,6 +9,7 @@ import { HandSamplerSystem } from './hand-sampler.js';
 import { setupLanding } from './landing.js';
 import { LessonSystem } from './lesson.js';
 import { ShadowHandsSystem } from './shadow-hands.js';
+import { AvatarCoachSystem } from './avatar-coach.js';
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => { /* still works online */ });
@@ -17,6 +18,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 World.create(document.getElementById('scene-container') as HTMLDivElement, projectOptions).then((world) => {
   world.registerSystem(HandSamplerSystem);
   world.registerSystem(ShadowHandsSystem);
+  world.registerSystem(AvatarCoachSystem);
   world.registerSystem(LessonSystem);
   setupLanding(world);
   // Development builds only: handles for scripted tests in the IWSDK emulator.

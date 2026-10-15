@@ -197,6 +197,50 @@ def clip_pose(clip_id: str) -> dict | None:
     return pose
 
 
+def mirror_pose(pose: dict) -> dict:
+    """A clip_pose mirrored left to right (x flipped, the two sides swapped), for a clip signed with the left hand."""
+    def flip(a, swap_slots=True):
+        a = np.array(a, float)
+        a[..., 0] *= -1
+        return (a[:, ::-1] if swap_slots else a).tolist()
+    out = {**pose, "present": np.array(pose["present"])[:, ::-1].tolist()}
+    for k in ("hand_rel", "wrist_pos", "shoulders", "elbows", "hips"):
+        out[k] = flip(pose[k])
+    if "face" in pose:  # nose, left eye, right eye, left ear, right ear, mouth left, mouth right
+        face = np.array(flip(pose["face"], swap_slots=False))
+        out["face"] = face[:, [0, 2, 1, 4, 3, 6, 5]].tolist()
+    from .steps import sign_steps
+    out["learn"] = sign_steps(out)
+    return out
+
+
+def sign_avatar(cfg: Config, sign_id: str, pack_id: str = "ksl-core") -> dict | None:
+    """The avatar for a catalogue sign: its dictionary clip's pose and steps, mirrored like its reference when the
+    clip is signed with the left hand (references.py), so the avatar, the shadow hands and the check agree."""
+    from .canonical import from_mediapipe, gap_fill, trim
+    from .references import hand_lifts
+    from . import joints as J
+
+    catalogue = load_catalogue(catalogue_file(cfg, pack_id))
+    entry = next((e for e in catalogue["signs"] if e["id"] == sign_id), None)
+    word = ((entry or {}).get("sources") or {}).get("dictionary")
+    clip = _v1_clips().get(word) if word else None
+    if not clip:
+        return None
+    pose = clip_pose(clip)
+    if pose is None:
+        return None
+    dcfg = load_config(DICTIONARY_CONFIG)
+    with np.load(path(dcfg, "landmarks") / f"{clip}.npz") as d:
+        seg, _ = from_mediapipe(d)
+    f = dcfg.features
+    seg = trim(gap_fill(seg, f.gap_fill_frames), f.rest_height, f.trim_margin_frames) if seg is not None else None
+    lift = hand_lifts(seg) if seg is not None else np.zeros(2)
+    if lift[J.LEFT] > 1.3 * lift[J.RIGHT]:
+        pose = mirror_pose(pose)
+    return {"sign": sign_id, "gloss": entry["gloss"], **pose}
+
+
 def clip_landmarks(clip_id: str) -> dict:
     """MediaPipe image landmarks of one clip (x, y in 0..1 of the frame), frame k at k / fps seconds."""
     if not clip_id.isalnum():

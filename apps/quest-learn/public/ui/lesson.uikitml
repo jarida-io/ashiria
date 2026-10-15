@@ -36,6 +36,13 @@
     color: #3a6ea5;
   }
 
+  .step {
+    margin-bottom: 4px;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #0b6e8a;
+  }
+
   .status {
     margin-top: 12px;
     font-size: 20px;
@@ -103,6 +110,7 @@
     <div id="mastery" class="eyebrow">New (0 of 4)</div>
     <div id="mode" class="mode">Practise Kenyan Sign Language</div>
     <Divider></Divider>
+    <div id="step" class="step">Watch the coach sign it, one step at a time.</div>
     <div id="status" class="status">Getting ready</div>
     <div id="hint" class="hint">Raise your hand into the shadow hands to try a sign.</div>
     <div id="info" class="info">Hands: -</div>

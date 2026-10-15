@@ -16,7 +16,8 @@ from .features import flexion, spread
 PAUSE = 0.45         # a pause: motion below this share of the sign's median motion (MediaPipe's jitter never stops)
 MIN_MOVE_S = 0.15    # shorter movements merge into their neighbours
 MAX_MOVES = 3
-STRAIGHT, BENT = 1.45, 1.7  # a finger's summed bend (radians): straight below, curled above (video landmarks)
+STRAIGHT, BENT = 1.45, 1.7
+SHOULDER_M = 0.34    # metres per shoulder width (the dictionary signer's median), to place hand points  # a finger's summed bend (radians): straight below, curled above (video landmarks)
 
 
 def _smooth(x: np.ndarray, k: int = 5) -> np.ndarray:
@@ -164,8 +165,11 @@ def sign_steps(pose: dict) -> dict:
     name = {J.RIGHT: "right hand", J.LEFT: "left hand"}
     who = "both hands" if two else f"your {name[dom]}"
 
+    # Where a hand is: its middle knuckle (the centre of the hand), not the wrist, which sits below the fingers.
+    centre = wrist + hand[:, :, J.MIDDLE[0]] / SHOULDER_M
+
     def pose_words(t: int, s: int) -> str:
-        return f"{handshape(hand[t, s])}, {location(wrist[t, s], s)}, palm {palm_facing(hand[t, s], s)}"
+        return f"{handshape(hand[t, s])}, {location(centre[t, s], s)}, palm {palm_facing(hand[t, s], s)}"
 
     steps = []
     start_text = f"Start with {who}: " + pose_words(rise, dom)
@@ -204,7 +208,7 @@ def sign_steps(pose: dict) -> dict:
             continue  # a pause in place: nothing new to learn
         else:
             what = "move " + direction(d) + (" in an arc" if bend > 0.25 * chord and chord > 0.15 else "")
-            what += f", ending {location(wrist[s1, dom], dom)}"
+            what += f", ending {location(centre[s1, dom], dom)}"
             if shape != prev_shape:
                 what += f", hand becoming {shape}"
         if two and np.linalg.norm(wrist[s1, 0] - wrist[s1, 1]) < 0.3:

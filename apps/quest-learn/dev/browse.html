@@ -4,7 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Ashiria sign browser</title>
-<script type="importmap">{"imports": {"three": "/node_modules/three/build/three.module.js", "three/addons/": "/node_modules/three/examples/jsm/"}}</script>
 <style>
   :root { --bg: #f6f7f8; --card: #fff; --ink: #1d1d1f; --muted: #6b6f76; --line: #e3e5e8; --sel: #e6f6fa; --accent: #0b6e8a; --v1: #1f8a4c; --warn: #8a6d1f; --stage: #0d1b22; }
   @media (prefers-color-scheme: dark) { :root { --bg: #111315; --card: #1b1e21; --ink: #eef0f2; --muted: #9aa0a6; --line: #2b2f33; --sel: #12323b; --accent: #4fd1e8; --v1: #5fd38d; --warn: #e0c060; } }
@@ -48,6 +47,16 @@
   .controls .group { display: inline-flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; }
   #play { font: inherit; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
   #scrub { width: 100%; margin: 6px 0 0; }
+  .steps { max-width: 980px; margin-top: 14px; }
+  .steps h3 { font-size: 15px; margin: 0 0 6px; }
+  .steps ol { margin: 0; padding-left: 22px; }
+  .steps li { padding: 3px 0; border: 0; cursor: default; }
+  .steps li:hover { background: none; }
+  .steps li.now { font-weight: 600; color: var(--accent); }
+  .caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px; background: linear-gradient(transparent, rgba(0,0,0,.75));
+    color: #fff; font-size: 15px; line-height: 1.35; pointer-events: none; }
+  .caption b { color: #9fe8f5; }
+  #learn[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent); }
   .cap { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .controls { display: flex; gap: 8px 16px; align-items: center; margin: 12px 0 4px; flex-wrap: wrap; }
   label { display: flex; gap: 6px; align-items: center; }
@@ -146,7 +155,7 @@ let index = [], shown = [], listed = 0, current = null, raf = 0;
 let rec = null;            // recogniser results (ashiria embed-signs), or null
 // Avatar (dev/avatar.js, loaded as a module after this script) or the dictionary video, remembered per browser.
 let mode = (() => { try { return localStorage.getItem('ashiria.browse.mode') || 'avatar'; } catch { return 'avatar'; } })();
-let avView = 'front', avMirror = false, avPath = false;
+let avView = 'front', avMirror = false, avPath = false, avLearn = false;
 const avatarReady = new Promise((resolve) => addEventListener('avatar-ready', () => resolve(window.ashiriaAvatar), { once: true }));
 document.body.classList.add(`mode-${mode}`);
 const byClip = new Map();  // clip_id -> first index entry, to name the signs the recogniser mentions
@@ -298,6 +307,7 @@ async function open(x, push = true) {
         </select>
         <label><input type="checkbox" id="av-mirror" /> Mirror</label>
         <label><input type="checkbox" id="av-path" /> Hand paths</label>
+        <button id="learn" aria-pressed="false">Learn step by step</button>
       </span>
       <span class="group video-only">
         <label><input type="checkbox" id="hands" checked /> Hands</label>
@@ -309,7 +319,7 @@ async function open(x, push = true) {
     </div>
     <div class="media">
       <div><div class="stage"><video id="video" src="/dev/study/clip/${x.clip_id}" muted loop autoplay playsinline></video><canvas id="overlay"></canvas>
-          <div class="avatar-host" id="avatar-host"></div></div>
+          <div class="avatar-host" id="avatar-host"></div><div class="caption avatar-only" id="caption" hidden></div></div>
         <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Position in the sign" />
         <div class="cap"><span class="video-only">Dictionary video with MediaPipe landmarks. <span class="legend"><span style="background:${COLORS[0]}"></span>signer's right<span style="background:${COLORS[1]}"></span>left</span></span>
           <span class="avatar-only">Avatar signing from the video's landmarks: arms, hands, fingers and head movement, not facial expression. Drag to turn it. Palms are paler; nails mark the backs of the fingers.
@@ -327,6 +337,7 @@ async function open(x, push = true) {
     ${sameVideo}
     ${notes ? `<ul class="audit">${notes}</ul>` : ''}
     ${media}
+    <section class="steps" id="steps" hidden><h3>Steps</h3><ol id="step-list"></ol></section>
     ${x.description ? `<p class="desc">${esc(x.description)}</p>` : ''}
     ${x.note ? `<p class="desc muted">Note: ${esc(x.note)}</p>` : ''}
     ${recSection(x)}`;
@@ -353,6 +364,21 @@ async function open(x, push = true) {
   $('av-mirror').addEventListener('change', () => { avMirror = $('av-mirror').checked; window.ashiriaAvatar?.setMirror(avMirror); });
   $('av-path').checked = avPath;
   $('av-path').addEventListener('change', () => { avPath = $('av-path').checked; window.ashiriaAvatar?.setPath(avPath); });
+  // Learn: the avatar shows one step at a time, slowly, with the camera on the moving hand.
+  const showStep = (s, steps) => {
+    document.querySelectorAll('#step-list li').forEach((li, i) => li.classList.toggle('now', i === s.step));
+    const cap = $('caption');
+    cap.hidden = !(avLearn && s.step >= 0 && s.text);
+    if (!cap.hidden) cap.innerHTML = `<b>Step ${s.step + 1} of ${steps.length}</b> ${esc(s.text)}`;
+  };
+  const setLearn = (on) => {
+    avLearn = on;
+    $('learn').setAttribute('aria-pressed', String(on));
+    $('learn').textContent = on ? 'Stop step by step' : 'Learn step by step';
+    $('caption').hidden = !on;
+    window.ashiriaAvatar?.setLearning(on, showStep);
+  };
+  $('learn').addEventListener('click', () => setLearn(!avLearn));
   const [lmRes, refRes, poseRes] = await Promise.all([fetch(`/dev/study/landmarks/${x.clip_id}`),
     fetch(`/dev/study/reference/${x.clip_id}`), fetch(`/dev/study/pose/${x.clip_id}`)]);
   if (current !== x) return;
@@ -369,6 +395,10 @@ async function open(x, push = true) {
     av.setView(avView);
     av.setPath(avPath);
     av.setPose(pose);
+    const steps = pose.learn?.steps ?? [];
+    $('steps').hidden = !steps.length;
+    $('step-list').innerHTML = steps.map((s) => `<li>${esc(s.text)}</li>`).join('');
+    setLearn(avLearn);
     if (mode === 'avatar') av.mount($('avatar-host'));
   });
   if (lm) {
@@ -449,7 +479,8 @@ $('list').addEventListener('scroll', () => {
 });
 </script>
 <script type="module">
-  import { createAvatar } from '/dev/study/avatar.js';
+  // The app's own avatar (src/avatar), compiled by the dev server.
+  import { createAvatar } from '/src/avatar/viewer.ts';
   window.ashiriaAvatar = createAvatar();
   dispatchEvent(new Event('avatar-ready'));
 </script>
