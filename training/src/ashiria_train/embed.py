@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader, Dataset
 from .augment import augment
 from .calibrate import VIDEO_REST_HEIGHT, simulated_stream
 from .canonical import Segment, active_window, from_mediapipe, gap_fill, resample, trim
-from .config import Config, load_config, path
+from .config import Config, load_config, path, training_relative
 from .features import sequence_features
 from .matching import dtw_many, segment_descriptor
 from .model import SignNet
@@ -259,7 +259,7 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=1e-3, total_steps=epochs * ((len(data) + batch - 1) // batch))
     loader = DataLoader(data, batch_size=batch, shuffle=True, drop_last=True, num_workers=4, persistent_workers=False)
 
-    vocab = [line.split("#")[0].strip() for line in open("configs/vocabulary_v1.txt") if line.split("#")[0].strip()]
+    vocab = [line.split("#")[0].strip() for line in open(training_relative("configs/vocabulary_v1.txt")) if line.split("#")[0].strip()]
     index = {lab: k for k, lab in enumerate(labels)}
     chosen = [index[w] for w in vocab if w in index] + [index[w + " 1"] for w in vocab if w not in index and w + " 1" in index]
     rng = np.random.default_rng(seed)
@@ -295,7 +295,7 @@ def evaluate_run(cfg: Config, run: Path | None = None, attempts: int = 4, seed: 
     ref_feats = [sequence_features(r.hand_rel, r.wrist_pos, r.present, 1.0 / r.fps) for r in refs]
     device = pick_device(str(cfg.train.device))
     model = _load_model(cfg, run, ref_feats[0].shape[-1], device)
-    vocab = [line.split("#")[0].strip() for line in open("configs/vocabulary_v1.txt") if line.split("#")[0].strip()]
+    vocab = [line.split("#")[0].strip() for line in open(training_relative("configs/vocabulary_v1.txt")) if line.split("#")[0].strip()]
     index = {lab: k for k, lab in enumerate(labels)}
     chosen = [index[w] for w in vocab if w in index] + [index[w + " 1"] for w in vocab if w not in index and w + " 1" in index]
     rng = np.random.default_rng(seed)
@@ -367,7 +367,7 @@ def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: 
     near = np.argsort(-sim, axis=1)[:, :closest]
     results = {ids[i]: {"closest": [[ids[j], round(float(sim[i, j]), 3)] for j in near[i]]} for i in range(len(refs))}
 
-    vocab = [line.split("#")[0].strip() for line in open("configs/vocabulary_v1.txt") if line.split("#")[0].strip()]
+    vocab = [line.split("#")[0].strip() for line in open(training_relative("configs/vocabulary_v1.txt")) if line.split("#")[0].strip()]
     index = {lab: k for k, lab in enumerate(labels)}
     v1 = {index[w] if w in index else index.get(w + " 1") for w in vocab} - {None}
     ref_desc = np.stack([segment_descriptor(r, p_dtw.weights) for r in dtw_refs]).astype(np.float64)
