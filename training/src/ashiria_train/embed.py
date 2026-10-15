@@ -25,14 +25,15 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from .augment import augment
-from .calibrate import VIDEO_REST_HEIGHT, simulate_attempt
+from .calibrate import VIDEO_REST_HEIGHT, simulated_stream
 from .canonical import Segment, active_window, from_mediapipe, gap_fill, resample, trim
 from .config import Config, load_config, path
 from .features import sequence_features
 from .matching import dtw_many, segment_descriptor
 from .model import SignNet
 from .params import EngineParams
-from .pipeline import cut_reference
+from .pipeline import cut_reference, prepare
+from .segmenter import segment_stream
 from .train import pick_device
 
 DICTIONARY_CONFIG = "configs/ksl_dictionary.yaml"
@@ -40,10 +41,36 @@ DICTIONARY_CONFIG = "configs/ksl_dictionary.yaml"
 # Verify ends a single sign at its hold, but that cut a phrase down to its first sign: "I Lost My Bag" kept 0.7 s of
 # 4.6 s, so phrases that start alike became the same reference. Only segmenter settings change, not engine code.
 WHOLE_SIGN = {"hold_s": 11.0, "max_attempt_s": 10.0}
+# Whole signs are longer, so the recogniser resamples them to 64 frames (32 left too few for the handshape once the
+# rise and drop were included). The current matcher (DTW) is compared at the engine's own frame count.
+RECOGNISER_FRAMES = 64
+
+
+def whole_sign(p: EngineParams) -> EngineParams:
+    return dataclasses.replace(p, segmenter=dataclasses.replace(p.segmenter, **WHOLE_SIGN))
 
 
 def recogniser_params(p: EngineParams) -> EngineParams:
-    return dataclasses.replace(p, segmenter=dataclasses.replace(p.segmenter, **WHOLE_SIGN))
+    return dataclasses.replace(whole_sign(p), seq_len=RECOGNISER_FRAMES)
+
+
+def _simulate(ref: Segment, rng, aug: dict, p_sim: EngineParams, p_dtw: EngineParams) -> tuple[Segment | None, Segment | None]:
+    """One simulated attempt, prepared for the recogniser (p_sim's frame count) and for DTW (p_dtw's)."""
+    sp = p_sim.segmenter
+    attempts = segment_stream(sp, simulated_stream(ref, rng, aug, sp.tick_hz, drop_after_hold=sp.hold_s >= sp.max_attempt_s))
+    if not attempts:
+        return None, None
+    raw = attempts[0].segment
+    return prepare(raw, p_sim, sp.rest_height), prepare(raw, p_dtw, sp.rest_height)
+
+
+def _matcher_references(cfg: Config, ids: list[str]) -> tuple[EngineParams, list[Segment]]:
+    """The same whole-sign references at the engine's frame count, for the DTW comparison."""
+    p_dtw = whole_sign(EngineParams.from_config(cfg))
+    _, refs, dtw_ids = load_references(p_dtw)
+    if dtw_ids != ids:
+        raise SystemExit("Recogniser and matcher references differ; delete data/dictionary/cache and rerun.")
+    return p_dtw, refs
 
 
 def load_references(p: EngineParams) -> tuple[list[str], list[Segment], list[str]]:
@@ -151,18 +178,21 @@ def embed_all(model: Embedder, feats: list[np.ndarray], device, batch: int = 512
 
 
 def evaluate(model, labels, refs, ref_feats, device, p: EngineParams, aug: dict, signs: list[int], attempts: int, seed: int,
-             with_dtw: bool = True) -> dict:
-    """Simulated attempts at `signs` (indices into refs) → nearest of all references, by embedding and by DTW."""
+             p_dtw: EngineParams | None = None, dtw_refs: list[Segment] | None = None) -> dict:
+    """Simulated attempts at `signs` (indices into refs) → nearest of all references, by embedding and, given
+    `dtw_refs` (the same references at the matcher's frame count), by DTW."""
     rng = np.random.default_rng(seed)
     p_sim = dataclasses.replace(p, segmenter=dataclasses.replace(p.segmenter, rest_height=VIDEO_REST_HEIGHT))
+    with_dtw = dtw_refs is not None
+    p_dtw = p_dtw or p
     ref_emb = embed_all(model, ref_feats, device)
-    ref_desc = np.stack([segment_descriptor(r, p.weights) for r in refs]).astype(np.float64) if with_dtw else None
+    ref_desc = np.stack([segment_descriptor(r, p_dtw.weights) for r in dtw_refs]).astype(np.float64) if with_dtw else None
     rank_e, rank_d, learned_e, learned_d = [], [], [], []
     not_cut = 0
     learned = np.array(signs)
     for i in signs:
         for _ in range(attempts):
-            att = simulate_attempt(refs[i], rng, aug, p_sim)
+            att, att_dtw = _simulate(refs[i], rng, aug, p_sim, p_dtw)
             if att is None:
                 not_cut += 1
                 continue
@@ -172,7 +202,7 @@ def evaluate(model, labels, refs, ref_feats, device, p: EngineParams, aug: dict,
             rank_e.append(int((sim > sim[i]).sum()) + 1)
             learned_e.append(int(learned[np.argmax(sim[learned])] == i))
             if with_dtw:
-                d = dtw_many(segment_descriptor(att, p.weights).astype(np.float64), ref_desc, p.dtw_band)
+                d = dtw_many(segment_descriptor(att_dtw, p_dtw.weights).astype(np.float64), ref_desc, p_dtw.dtw_band)
                 rank_d.append(int((d < d[i]).sum()) + 1)
                 learned_d.append(int(learned[np.argmin(d[learned])] == i))
 
@@ -239,7 +269,8 @@ def evaluate_run(cfg: Config, run: Path | None = None, attempts: int = 4, seed: 
     """Test a trained run on simulated attempts against DTW (report.json), then per sign (signs.json)."""
     run = Path(run) if run else latest_run(cfg)
     p = recogniser_params(EngineParams.from_config(cfg))
-    labels, refs, _ = load_references(p)
+    labels, refs, ids = load_references(p)
+    p_dtw, dtw_refs = _matcher_references(cfg, ids)
     ref_feats = [sequence_features(r.hand_rel, r.wrist_pos, r.present, 1.0 / r.fps) for r in refs]
     device = pick_device(str(cfg.train.device))
     model = _load_model(cfg, run, ref_feats[0].shape[-1], device)
@@ -254,11 +285,15 @@ def evaluate_run(cfg: Config, run: Path | None = None, attempts: int = 4, seed: 
         "note": "one signer, simulated variation: robustness to augmentation, not accuracy on other people",
         "cut": "whole signs: an attempt ends when the hands drop (up to 10 s), not at a hold",
         "references": len(refs),
-        "vocabulary": evaluate(model, labels, refs, ref_feats, device, p, dict(cfg.calibrate.augment), chosen, attempts, seed),
-        "other_signs": evaluate(model, labels, refs, ref_feats, device, p, dict(cfg.calibrate.augment), others, 2, seed + 1),
+        "frames": {"recogniser": p.seq_len, "matcher": p_dtw.seq_len},
+        "vocabulary": evaluate(model, labels, refs, ref_feats, device, p, dict(cfg.calibrate.augment), chosen, attempts, seed,
+                               p_dtw, dtw_refs),
+        "other_signs": evaluate(model, labels, refs, ref_feats, device, p, dict(cfg.calibrate.augment), others, 2, seed + 1,
+                                p_dtw, dtw_refs),
         # Harder: the training augmentations (bigger rotations, more jitter) plus finger noise.
         "vocabulary_hard": evaluate(model, labels, refs, ref_feats, device, p,
-                                    {**dict(cfg.train.augment), "finger_noise_rad": 0.15}, chosen, attempts, seed + 2),
+                                    {**dict(cfg.train.augment), "finger_noise_rad": 0.15}, chosen, attempts, seed + 2,
+                                    p_dtw, dtw_refs),
     }
     (run / "report.json").write_text(json.dumps(report, indent=1))
     for name in ("vocabulary", "other_signs", "vocabulary_hard"):
@@ -296,6 +331,7 @@ def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: 
     t0 = time.time()
     p = recogniser_params(EngineParams.from_config(cfg))
     labels, refs, ids = load_references(p)
+    p_dtw, dtw_refs = _matcher_references(cfg, ids)
     feats = [sequence_features(r.hand_rel, r.wrist_pos, r.present, 1.0 / r.fps) for r in refs]
     device = pick_device(str(cfg.train.device))
     model = _load_model(cfg, run, feats[0].shape[-1], device)
@@ -310,7 +346,7 @@ def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: 
     vocab = [line.split("#")[0].strip() for line in open("configs/vocabulary_v1.txt") if line.split("#")[0].strip()]
     index = {lab: k for k, lab in enumerate(labels)}
     v1 = {index[w] if w in index else index.get(w + " 1") for w in vocab} - {None}
-    ref_desc = np.stack([segment_descriptor(r, p.weights) for r in refs]).astype(np.float64)
+    ref_desc = np.stack([segment_descriptor(r, p_dtw.weights) for r in dtw_refs]).astype(np.float64)
     p_sim = dataclasses.replace(p, segmenter=dataclasses.replace(p.segmenter, rest_height=VIDEO_REST_HEIGHT))
     tests = {"normal": dict(cfg.calibrate.augment), "harder": {**dict(cfg.train.augment), "finger_noise_rad": 0.15}}
     summary = {}
@@ -319,17 +355,17 @@ def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: 
         owner, att_feats, att_segs = [], [], []
         for i, r in enumerate(refs):
             for _ in range(attempts):
-                a = simulate_attempt(r, rng, aug, p_sim)
+                a, a_dtw = _simulate(r, rng, aug, p_sim, p_dtw)
                 if a is not None:
                     owner.append(i)
                     att_feats.append(sequence_features(a.hand_rel, a.wrist_pos, a.present, 1.0 / a.fps))
-                    att_segs.append(a)
+                    att_segs.append(a_dtw)
         top = (embed_all(model, att_feats, device) @ ref_emb.T).argmax(1)
         dtw_top = {}
         if name == "normal":
             for a, (i, seg) in enumerate(zip(owner, att_segs)):
                 if i in v1:
-                    dtw_top[a] = int(np.argmin(dtw_many(segment_descriptor(seg, p.weights).astype(np.float64), ref_desc, p.dtw_band)))
+                    dtw_top[a] = int(np.argmin(dtw_many(segment_descriptor(seg, p_dtw.weights).astype(np.float64), ref_desc, p_dtw.dtw_band)))
         for i in range(len(refs)):
             results[ids[i]][name] = {"tried": attempts, "tests": 0, "first": 0, "mistaken_for": []}
         for a, i in enumerate(owner):
@@ -353,7 +389,7 @@ def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: 
         print(f"{name}: {len(owner)} attempts, recognised first {summary[name]['first']:.1%} ({time.time() - t0:.0f} s)", flush=True)
 
     report = json.loads((run / "report.json").read_text()) if (run / "report.json").exists() else {}
-    out = {"run": run.name, "trained_on": trained_on, "signs": len(refs), "attempts_per_sign": attempts,
+    out = {"run": run.name, "trained_on": trained_on, "signs": len(refs), "attempts_per_sign": attempts, "frames": p.seq_len,
            "note": "one signer, simulated variation: robustness to variation, not accuracy on other people",
            "summary": summary, "report": {k: report[k] for k in ("vocabulary", "other_signs", "vocabulary_hard") if k in report},
            "results": results}
