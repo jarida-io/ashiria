@@ -39,18 +39,17 @@ def nearest_valid(valid: np.ndarray) -> np.ndarray:
     return np.where(np.abs(t - left) <= np.abs(right - t), left, right)
 
 
-def from_mediapipe(data, min_shoulder_width_m: float = 0.1) -> tuple[Segment | None, str]:
-    """Build a Segment from one clip's extraction output (see extract.py for the arrays)."""
-    present = data["hand_present"].astype(np.float64)
-    if len(present) < 4:
-        return None, "too few frames"
+def body_frame(data, min_shoulder_width_m: float = 0.1):
+    """The signer's body frame per frame of a clip: (pose [T, 33, 3], R [T, 3, 3], nose [T, 3], shoulder width [T]),
+    or a reason string. Frames without a usable pose borrow the nearest frame that has one. R's rows are the axes:
+    x towards the signer's right shoulder, y up, z the way the face points."""
     pose_ok = data["pose_present"].astype(bool)
     pose = data["pose_world"].astype(np.float64)
     ls, rs = pose[:, J.POSE_LEFT_SHOULDER], pose[:, J.POSE_RIGHT_SHOULDER]
     width = np.linalg.norm(rs - ls, axis=-1)
     valid = pose_ok & (width > min_shoulder_width_m)
     if not valid.any():
-        return None, "no body pose"
+        return "no body pose"
     near = nearest_valid(valid)
     pose, width = pose[near], width[near]
     ls, rs, nose = pose[:, J.POSE_LEFT_SHOULDER], pose[:, J.POSE_RIGHT_SHOULDER], pose[:, J.POSE_NOSE]
@@ -67,6 +66,18 @@ def from_mediapipe(data, min_shoulder_width_m: float = 0.1) -> tuple[Segment | N
     if np.median(((nose - ears) * z).sum(-1)) < 0:
         z = -z
     R = np.stack([x, y, z], axis=1)  # rows are the reference axes in MediaPipe world coordinates
+    return pose, R, nose, width
+
+
+def from_mediapipe(data, min_shoulder_width_m: float = 0.1) -> tuple[Segment | None, str]:
+    """Build a Segment from one clip's extraction output (see extract.py for the arrays)."""
+    present = data["hand_present"].astype(np.float64)
+    if len(present) < 4:
+        return None, "too few frames"
+    frame = body_frame(data, min_shoulder_width_m)
+    if isinstance(frame, str):
+        return None, frame
+    pose, R, nose, width = frame
 
     hand = data["hand_world"].astype(np.float64)
     hand_rel = np.einsum("tij,tskj->tski", R, hand - hand[:, :, :1, :])
@@ -74,6 +85,16 @@ def from_mediapipe(data, min_shoulder_width_m: float = 0.1) -> tuple[Segment | N
     wrists = np.stack([pose[:, J.POSE_RIGHT_WRIST], pose[:, J.POSE_LEFT_WRIST]], axis=1)
     wrist_pos = np.einsum("tij,tsj->tsi", R, wrists - nose[:, None, :]) / width[:, None, None]
     return Segment(hand_rel, wrist_pos, present, float(data["fps"])), "ok"
+
+
+def body_points(data, joints: list[int], min_shoulder_width_m: float = 0.1) -> np.ndarray | None:
+    """MediaPipe pose joints in the same frame and units as Segment.wrist_pos: [T, len(joints), 3], shoulder widths
+    from the nose. None without a usable pose."""
+    frame = body_frame(data, min_shoulder_width_m)
+    if isinstance(frame, str):
+        return None
+    pose, R, nose, width = frame
+    return np.einsum("tij,tsj->tsi", R, pose[:, joints] - nose[:, None, :]) / width[:, None, None]
 
 
 def mirror(seg: Segment) -> Segment:

@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Ashiria sign browser</title>
+<script type="importmap">{"imports": {"three": "/node_modules/three/build/three.module.js", "three/addons/": "/node_modules/three/examples/jsm/"}}</script>
 <style>
   :root { --bg: #f6f7f8; --card: #fff; --ink: #1d1d1f; --muted: #6b6f76; --line: #e3e5e8; --sel: #e6f6fa; --accent: #0b6e8a; --v1: #1f8a4c; --warn: #8a6d1f; --stage: #0d1b22; }
   @media (prefers-color-scheme: dark) { :root { --bg: #111315; --card: #1b1e21; --ink: #eef0f2; --muted: #9aa0a6; --line: #2b2f33; --sel: #12323b; --accent: #4fd1e8; --v1: #5fd38d; --warn: #e0c060; } }
@@ -36,6 +37,17 @@
   .stage video { width: 100%; height: 100%; display: block; object-fit: contain; }
   .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .stage.ref { background: var(--stage); }
+  .avatar-host { position: absolute; inset: 0; background: var(--stage); }
+  .avatar-host .msg { position: absolute; inset: 0; display: grid; place-items: center; color: #9aa0a6; font-size: 13px; padding: 16px; text-align: center; }
+  body.mode-avatar .video-only, body.mode-video .avatar-only { display: none !important; }
+  body.mode-avatar #video, body.mode-avatar #overlay { visibility: hidden; }
+  body.mode-video .avatar-host { display: none; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { font: inherit; padding: 6px 12px; border: 0; background: var(--card); color: var(--ink); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); font-weight: 600; }
+  .controls .group { display: inline-flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; }
+  #play { font: inherit; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+  #scrub { width: 100%; margin: 6px 0 0; }
   .cap { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .controls { display: flex; gap: 8px 16px; align-items: center; margin: 12px 0 4px; flex-wrap: wrap; }
   label { display: flex; gap: 6px; align-items: center; }
@@ -132,6 +144,11 @@ const FLAG_CHIP = { few_hands: 'few hands', no_signing: 'hands low', partial_dec
   long: 'long', short: 'short', copies_differ: 'copies differ', duplicate: 'duplicate', near_duplicate: 'near duplicate' };
 let index = [], shown = [], listed = 0, current = null, raf = 0;
 let rec = null;            // recogniser results (ashiria embed-signs), or null
+// Avatar (dev/avatar.js, loaded as a module after this script) or the dictionary video, remembered per browser.
+let mode = (() => { try { return localStorage.getItem('ashiria.browse.mode') || 'avatar'; } catch { return 'avatar'; } })();
+let avView = 'front', avMirror = false;
+const avatarReady = new Promise((resolve) => addEventListener('avatar-ready', () => resolve(window.ashiriaAvatar), { once: true }));
+document.body.classList.add(`mode-${mode}`);
 const byClip = new Map();  // clip_id -> first index entry, to name the signs the recogniser mentions
 
 const $ = (id) => document.getElementById(id);
@@ -272,14 +289,30 @@ async function open(x, push = true) {
     ? `<div class="muted links">Same video as: ${x.same_video.map((n) => `<button data-name="${esc(n)}">${esc(n)}</button>`).join(', ')}</div>` : '';
   const media = x.clip_id ? `
     <div class="controls">
-      <label><input type="checkbox" id="hands" checked /> Hands</label>
-      <label><input type="checkbox" id="body" checked /> Body</label>
-      <label><input type="checkbox" id="dots" /> Joint numbers</label>
+      <div class="seg" role="group" aria-label="Show">
+        <button data-mode="avatar" aria-pressed="${mode === 'avatar'}">Avatar</button><button data-mode="video" aria-pressed="${mode === 'video'}">Video</button>
+      </div>
+      <span class="group avatar-only">
+        <select id="av-view" aria-label="Camera">
+          <option value="front">Facing you</option><option value="hands">Hands close-up</option><option value="side">From the side</option><option value="yours">Your view</option>
+        </select>
+        <label><input type="checkbox" id="av-mirror" /> Mirror</label>
+      </span>
+      <span class="group video-only">
+        <label><input type="checkbox" id="hands" checked /> Hands</label>
+        <label><input type="checkbox" id="body" checked /> Body</label>
+        <label><input type="checkbox" id="dots" /> Joint numbers</label>
+      </span>
       <label>Speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option></select></label>
+      <button id="play">Pause</button>
     </div>
     <div class="media">
-      <div><div class="stage"><video id="video" src="/dev/study/clip/${x.clip_id}" muted loop autoplay playsinline controls></video><canvas id="overlay"></canvas></div>
-        <div class="cap">Dictionary video with MediaPipe landmarks. <span class="legend"><span style="background:${COLORS[0]}"></span>signer's right<span style="background:${COLORS[1]}"></span>left</span></div></div>
+      <div><div class="stage"><video id="video" src="/dev/study/clip/${x.clip_id}" muted loop autoplay playsinline></video><canvas id="overlay"></canvas>
+          <div class="avatar-host" id="avatar-host"></div></div>
+        <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Position in the sign" />
+        <div class="cap"><span class="video-only">Dictionary video with MediaPipe landmarks. <span class="legend"><span style="background:${COLORS[0]}"></span>signer's right<span style="background:${COLORS[1]}"></span>left</span></span>
+          <span class="avatar-only">Avatar signing from the video's landmarks: arms, hands and fingers, not the face. Drag to turn it. Palms are the paler side.
+            <span class="legend"><span style="background:${COLORS[0]}"></span>signer's right<span style="background:${COLORS[1]}"></span>left</span></span></div></div>
       <div><div class="stage ref"><canvas id="ref"></canvas></div>
         <div class="cap" id="refcap">Reference hands Ashiria would cut from this clip, facing you like the video.</div></div>
     </div>
@@ -308,11 +341,32 @@ async function open(x, push = true) {
   }));
   if (!x.clip_id) return;
   $('speed').addEventListener('change', () => ($('video').playbackRate = +$('speed').value));
-  const [lmRes, refRes] = await Promise.all([fetch(`/dev/study/landmarks/${x.clip_id}`), fetch(`/dev/study/reference/${x.clip_id}`)]);
+  $('play').addEventListener('click', () => { const v = $('video'); v.paused ? v.play() : v.pause(); });
+  $('video').addEventListener('play', () => ($('play').textContent = 'Pause'));
+  $('video').addEventListener('pause', () => ($('play').textContent = 'Play'));
+  $('scrub').addEventListener('input', () => { const v = $('video'); if (v.duration) v.currentTime = (+$('scrub').value / 1000) * v.duration; });
+  $('main').querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  $('av-view').value = avView;
+  $('av-mirror').checked = avMirror;
+  $('av-view').addEventListener('change', () => { avView = $('av-view').value; window.ashiriaAvatar?.setView(avView); });
+  $('av-mirror').addEventListener('change', () => { avMirror = $('av-mirror').checked; window.ashiriaAvatar?.setMirror(avMirror); });
+  const [lmRes, refRes, poseRes] = await Promise.all([fetch(`/dev/study/landmarks/${x.clip_id}`),
+    fetch(`/dev/study/reference/${x.clip_id}`), fetch(`/dev/study/pose/${x.clip_id}`)]);
   if (current !== x) return;
   const lm = lmRes.ok ? await lmRes.json() : null;
   const ref = refRes.ok ? await refRes.json() : null;
+  const pose = poseRes.ok ? await poseRes.json() : null;
   if (current !== x) return;
+  let avatar = null;
+  if (!pose) $('avatar-host').innerHTML = '<div class="msg">No avatar: MediaPipe found no body pose in this clip.</div>';
+  else avatarReady.then((av) => {
+    if (current !== x) return;
+    avatar = av;
+    av.setMirror(avMirror);
+    av.setView(avView);
+    av.setPose(pose);
+    if (mode === 'avatar') av.mount($('avatar-host'));
+  });
   if (lm) {
     const n = lm.hand_present.length;
     const pct = (slot) => Math.round((100 * lm.hand_present.filter((p) => p[slot]).length) / Math.max(n, 1));
@@ -323,7 +377,9 @@ async function open(x, push = true) {
   const tick = (now) => {
     const video = $('video');
     if (!video || current !== x) return;
-    if (lm) drawLandmarks($('overlay'), video, lm);
+    if (lm && mode === 'video') drawLandmarks($('overlay'), video, lm);
+    if (avatar && pose && mode === 'avatar') avatar.setFrame(Math.min(pose.frames - 1, Math.floor(video.currentTime * pose.fps)));
+    if (video.duration && document.activeElement !== $('scrub')) $('scrub').value = String(Math.round((video.currentTime / video.duration) * 1000));
     if (ref) {
       const speed = +$('speed').value, period = (ref.frames - 1) / ref.fps + 0.8;
       const t = Math.min(ref.frames - 1, Math.floor((((now - t0) / 1000 * speed) % period) * ref.fps));
@@ -334,10 +390,22 @@ async function open(x, push = true) {
   raf = requestAnimationFrame(tick);
 }
 
+function setMode(m) {
+  mode = m;
+  try { localStorage.setItem('ashiria.browse.mode', m); } catch {}
+  document.body.classList.remove('mode-avatar', 'mode-video');
+  document.body.classList.add(`mode-${m}`);
+  $('main').querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+  const host = $('avatar-host');
+  if (m === 'avatar' && host && !host.querySelector('.msg')) window.ashiriaAvatar?.mount(host);
+  else window.ashiriaAvatar?.unmount();
+}
+
 function closeDetail() {
   document.body.classList.remove('detail');
   cancelAnimationFrame(raf);
   $('main').querySelector('video')?.pause();
+  window.ashiriaAvatar?.unmount();
 }
 
 addEventListener('popstate', closeDetail);
@@ -375,6 +443,11 @@ $('list').addEventListener('scroll', () => {
   const l = $('list');
   if (listed < shown.length && l.scrollTop + l.clientHeight > l.scrollHeight - 400) listMore();
 });
+</script>
+<script type="module">
+  import { createAvatar } from '/dev/study/avatar.js';
+  window.ashiriaAvatar = createAvatar();
+  dispatchEvent(new Event('avatar-ready'));
 </script>
 </body>
 </html>

@@ -155,6 +155,33 @@ def clip_reference(clip_id: str) -> dict | None:
             "present": ref.present.ravel().tolist()}
 
 
+def clip_pose(clip_id: str) -> dict | None:
+    """One clip as the avatar plays it: the hands as Ashiria sees them (Segment: hand_rel in metres from the wrist,
+    wrist_pos in shoulder widths from the nose, slot 0 the signer's right) plus the shoulders, elbows and hips in the
+    same frame, lightly smoothed. Frame k is at k / fps seconds, like the video. None without a usable pose."""
+    from .canonical import body_points, from_mediapipe, gap_fill
+    from . import joints as J
+
+    if not clip_id.isalnum():
+        raise ValueError("bad clip id")
+    dcfg = load_config(DICTIONARY_CONFIG)
+    with np.load(path(dcfg, "landmarks") / f"{clip_id}.npz") as d:
+        seg, _ = from_mediapipe(d)
+        body = body_points(d, [J.POSE_RIGHT_SHOULDER, J.POSE_LEFT_SHOULDER, 14, 13, 24, 23])  # shoulders, elbows, hips
+    if seg is None or body is None:
+        return None
+    seg = gap_fill(seg, dcfg.features.gap_fill_frames)
+
+    def smooth(x: np.ndarray, k: int = 3) -> np.ndarray:  # MediaPipe's body depth jitters frame to frame
+        pad = np.concatenate([x[:1].repeat(k // 2, 0), x, x[-1:].repeat(k // 2, 0)])
+        return np.mean([pad[i:i + len(x)] for i in range(k)], axis=0)
+
+    r = lambda a, n: np.round(a, n).tolist()
+    return {"fps": float(seg.fps), "frames": len(seg), "present": seg.present.astype(int).tolist(),
+            "hand_rel": r(seg.hand_rel, 4), "wrist_pos": r(smooth(seg.wrist_pos), 3),
+            "shoulders": r(smooth(body[:, 0:2]), 3), "elbows": r(smooth(body[:, 2:4]), 3), "hips": r(smooth(body[:, 4:6]), 3)}
+
+
 def clip_landmarks(clip_id: str) -> dict:
     """MediaPipe image landmarks of one clip (x, y in 0..1 of the frame), frame k at k / fps seconds."""
     if not clip_id.isalnum():

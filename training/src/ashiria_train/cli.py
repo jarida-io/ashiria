@@ -63,6 +63,8 @@ def main(argv: list[str] | None = None) -> None:
     p = steps.add_parser("audit-dictionary", help="check every KSL Dictionary video: download, MediaPipe tracking, duplicates")
     p.add_argument("--workers", type=int, default=8)
     steps.add_parser("study-index", help="JSON index of every sign in the dictionary data sheet (dev-only sign browser)")
+    p = steps.add_parser("study-pose", help="JSON body and hands of one dictionary clip, for the avatar")
+    p.add_argument("clip_id")
     p = steps.add_parser("study-reference", help="JSON reference hands cut from one dictionary clip")
     p.add_argument("clip_id")
     p = steps.add_parser("study-landmarks", help="JSON MediaPipe image landmarks of one dictionary clip")
@@ -151,6 +153,10 @@ def main(argv: list[str] | None = None) -> None:
     elif args.step == "audit-dictionary":
         from .dictionary_audit import audit_dictionary
         audit_dictionary(args.workers)
+    elif args.step == "study-pose":
+        import json as _json
+        from .study import clip_pose
+        print(_json.dumps(clip_pose(args.clip_id)))
     elif args.step == "study-reference":
         import json as _json
         from .study import clip_reference

@@ -9,7 +9,8 @@
  * - /dev/study: the study sheet (dev/study.html): each sign's local dictionary video next to its reference hands,
  *   with Approve / Reject buttons that run `ashiria approve`. /dev/study/browse: every sign in the dictionary's data
  *   sheet, with MediaPipe's landmarks drawn over its video, the reference Ashiria would cut from it, audit flags and
- *   the recogniser's results (signs.json of the newest training/runs/embed- run). The videos never leave this Mac.
+ *   the recogniser's results (signs.json of the newest training/runs/embed- run), and an avatar (dev/avatar.js)
+ *   that signs each clip from its landmarks. The videos never leave this Mac.
  *
  * Production builds only bundle packs from public/packs/, and refuse any that is not a release pack
  * (`ashiria pack --release`: Studio-recorded, approved signs only).
@@ -109,6 +110,7 @@ export function ashiriaDev(): Plugin {
       let indexStamp = '';
       const landmarkCache = new Map<string, string>();
       const referenceCache = new Map<string, string>();
+      const poseCache = new Map<string, string>();
       server.middlewares.use('/dev/study', async (req, res) => {
         const url = (req.url ?? '/').split('?')[0];
         try {
@@ -137,6 +139,16 @@ export function ashiriaDev(): Plugin {
               landmarkCache.set(lm[1], await ashiria(['study-landmarks', lm[1]]));
             }
             return send(res, 200, landmarkCache.get(lm[1]) as string);
+          }
+          if (url === '/avatar.js') return send(res, 200, readFileSync(join(__dirname, 'dev/avatar.js'), 'utf8'), 'text/javascript');
+          const pose = /^\/pose\/([a-f0-9]+)$/.exec(url);
+          if (pose) {
+            if (!poseCache.has(pose[1])) {
+              if (poseCache.size > 200) poseCache.clear();
+              poseCache.set(pose[1], await ashiria(['study-pose', pose[1]]));
+            }
+            const text = poseCache.get(pose[1]) as string;
+            return text.trim() === 'null' ? send(res, 404, { error: 'no body pose' }) : send(res, 200, text);
           }
           const ref = /^\/reference\/([a-f0-9]+)$/.exec(url);
           if (ref) {
