@@ -25,6 +25,7 @@ def test_pose_wrists_decide_slots():
 
 
 def test_handedness_label_without_pose():
-    # MediaPipe assumes mirrored input, so "Left" on normal footage is the signer's right hand.
-    assert assign_slots([det(0.3, "Left")], None) == {J.RIGHT: 0}
+    # The label names the hand itself on ordinary (unmirrored) video: checked on the dictionary clips.
+    assert assign_slots([det(0.3, "Right")], None) == {J.RIGHT: 0}
+    assert assign_slots([det(0.3, "Left")], None) == {J.LEFT: 0}
     assert assign_slots([det(0.3, "Right"), det(0.7, "Right")], None) == {J.RIGHT: 0, J.LEFT: 1}

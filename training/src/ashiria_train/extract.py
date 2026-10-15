@@ -33,8 +33,9 @@ HAND_MODEL = "hand_landmarker.task"
 def assign_slots(dets: list[tuple], pose_image: np.ndarray | None) -> dict[int, int]:
     """Map hand detections to slots {slot: detection index} for footage that is not mirrored.
 
-    Uses the body pose's wrists when available; otherwise MediaPipe's handedness label,
-    which assumes a mirrored selfie image, so "Left" on normal footage is the signer's right hand.
+    Uses the body pose's wrists when available; otherwise MediaPipe's handedness label, which names the hand itself
+    on ordinary video ("Right" is the signer's right: checked on the dictionary, 198 of 200 detections agree with the
+    pose). MediaPipe's documentation says the label assumes a mirrored image; this version doesn't.
     """
     if not dets:
         return {}
@@ -49,7 +50,7 @@ def assign_slots(dets: list[tuple], pose_image: np.ndarray | None) -> dict[int, 
         # Same label twice: the signer's right hand is on the left of the image.
         order = np.argsort([d[0][J.WRIST, 0] for d in dets])
         return {J.RIGHT: int(order[0]), J.LEFT: int(order[1])}
-    return {(J.RIGHT if d[2] == "Left" else J.LEFT): k for k, d in enumerate(dets)}
+    return {(J.RIGHT if d[2] == "Right" else J.LEFT): k for k, d in enumerate(dets)}
 
 
 def _landmarkers(models_dir: str, e: dict):

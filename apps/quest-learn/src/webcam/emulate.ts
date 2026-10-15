@@ -2,8 +2,10 @@
 // tried on a desktop before a headset arrives. The camera is read the way the dictionary videos were (engine
 // CameraFrameBuilder: body-centred hands), then placed in front of the emulated head where a Quest would report them,
 // as WebXR's 25 hand joints. The app's own hand sampler reads them back unchanged.
-import { CameraFrameBuilder, NOSE_OFFSET, assignSlots, emptyFrame, type Frame, type V3 } from '@ashiria/engine';
+import { NOSE_OFFSET, emptyFrame, type CameraHand, type Frame, type V3 } from '@ashiria/engine';
 import { app } from '../app-state.js';
+import { SignReader, sameSign, type Reading } from './reader.js';
+import { CameraTracker } from './tracker.js';
 import { openVision, type CameraFrame, type Vision } from './vision.js';
 
 const JOINTS = ['wrist', 'thumb-metacarpal', 'thumb-phalanx-proximal', 'thumb-phalanx-distal', 'thumb-tip',
@@ -69,7 +71,9 @@ function jointMatrices(p21: V3[], right: boolean, root: Root): Float32Array[] {
   return pts.map((p, k) => {
     const along = unit(NEXT[k] >= 0 ? sub(pts[NEXT[k]], p) : sub(p, pts[k - 1]));
     const zAxis = mul(along, -1);
-    let yAxis = mul(palm, -1);
+    // +y out of the back: the back of the hand for the fingers; for the thumb (joints 1-4), whose nail faces
+    // sideways, across the bone and the palm normal, leaning a little to the back (as in the emulator's own poses).
+    let yAxis = k >= 1 && k <= 4 ? add(mul(cross(along, palm), right ? 1 : -1), mul(palm, -0.2)) : mul(palm, -1);
     yAxis = unit(sub(yAxis, mul(zAxis, dot(yAxis, zAxis))));
     const xAxis = cross(yAxis, zAxis);
     const m = new Float32Array([...local(xAxis), 0, ...local(yAxis), 0, ...local(zAxis), 0, ...local(sub(p, root.p)), 1]);
@@ -89,32 +93,98 @@ function setPose(hand: any, matrices: Float32Array[]): void {
   hand.updateHandPose();
 }
 
-/** A small mirrored camera view with the tracked hands, so you can see what the emulator is getting. */
-function preview(video: HTMLVideoElement): { draw(f: CameraFrame, slots: [number, number] | null): void; remove(): void } {
+const FINGERS = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]];
+const BONES = FINGERS.flatMap((c) => [[0, c[0]], [c[0], c[1]], [c[1], c[2]], [c[2], c[3]]]).concat([[5, 9], [9, 13], [13, 17]]);
+const COLOURS = ['#4fd1e8', '#b49cff']; // signer's right, left: as in the sign browser
+
+/** The camera view in a corner, drawn as a mirror, with each tracked hand's skeleton (faint while held after a
+ * dropout), and buttons to flip a mirrored camera and to show the emulator's own controls. */
+function preview(vision: Vision, device: any) {
+  const video = vision.video;
   const box = document.createElement('div');
-  box.style.cssText = 'position:fixed;right:12px;bottom:12px;width:220px;aspect-ratio:4/3;z-index:2147483000;border-radius:12px;'
-    + 'overflow:hidden;background:#000;box-shadow:0 6px 24px rgba(0,0,0,.35);pointer-events:none';
-  video.style.cssText = 'width:100%;height:100%;object-fit:cover;transform:scaleX(-1)';
+  box.style.cssText = 'position:fixed;right:12px;bottom:12px;width:320px;z-index:2147483000;border-radius:14px;overflow:hidden;'
+    + 'background:#0d1b22;box-shadow:0 8px 28px rgba(0,0,0,.4);font:13px/1.3 system-ui;color:#fff';
+  const stage = document.createElement('div');
+  // The view takes the camera's own shape, so landmarks (fractions of the frame) line up with the picture.
+  stage.style.cssText = `position:relative;aspect-ratio:${video.videoWidth || 4}/${video.videoHeight || 3};background:#000`;
+  video.style.cssText = 'width:100%;height:100%;object-fit:fill;display:block';
   const canvas = document.createElement('canvas');
   canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%';
-  const label = document.createElement('div');
-  label.style.cssText = 'position:absolute;left:8px;top:6px;font:600 12px system-ui;color:#fff;text-shadow:0 1px 2px #000';
-  label.textContent = 'Webcam hands';
-  box.append(video, canvas, label);
+  stage.append(video, canvas);
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;gap:6px;align-items:center;padding:8px 10px;flex-wrap:wrap';
+  const label = document.createElement('span');
+  label.style.cssText = 'flex:1;min-width:120px';
+  const button = (text: string, onClick: () => void) => {
+    const b = document.createElement('button');
+    b.textContent = text;
+    b.style.cssText = 'font:inherit;padding:4px 9px;border-radius:8px;border:1px solid #3a5560;background:#16303a;color:#fff;cursor:pointer';
+    b.addEventListener('click', onClick);
+    return b;
+  };
+  // The emulator's panels and transform handles get in the way while the webcam drives the hands.
+  const devui = device.devui?.devUIContainer as HTMLElement | undefined;
+  const handles = device.devui?.devUICanvas as HTMLElement | undefined;
+  const setControls = (on: boolean) => {
+    for (const el of [devui, handles]) if (el) el.style.visibility = on ? '' : 'hidden';
+    controls.textContent = on ? 'Hide emulator controls' : 'Emulator controls';
+  };
+  const flip = button('Flip camera', () => { vision.setMirrored(!vision.mirrored); onFlip(); });
+  const controls = button('', () => setControls(devui?.style.visibility === 'hidden'));
+  setControls(false);
+  bar.append(label, flip, controls);
+  // What the recogniser reads after each sign, over every dictionary sign, and whether it is the lesson's sign.
+  const model = document.createElement('div');
+  model.style.cssText = 'padding:0 10px 10px;line-height:1.4';
+  model.innerHTML = '<span style="opacity:.7">Model: loading…</span>';
+  box.append(stage, bar, model);
   document.body.append(box);
-  const colours = ['#4fd1e8', '#b49cff'];
+  let onFlip = () => {};
+
+  const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
   return {
-    draw(f, slots) {
-      const w = (canvas.width = 220 * devicePixelRatio), h = (canvas.height = 165 * devicePixelRatio);
+    onFlip(fn: () => void) { onFlip = fn; },
+    modelStatus(text: string) { model.innerHTML = `<span style="opacity:.7">${esc(text)}</span>`; },
+    reading(r: Reading | null, lesson: { gloss: string; aliases: string[] } | null) {
+      if (!r) { model.innerHTML = '<span style="opacity:.7">Model: that was too short to read. Try again.</span>'; return; }
+      const [best, ...rest] = r.guesses;
+      const match = lesson && r.guesses.slice(0, 3).some((g) => sameSign(g.sign, lesson.gloss, lesson.aliases));
+      const head = r.accepted
+        ? `<b style="font-size:16px">${esc(best.sign.name)}</b> <span style="opacity:.7">${best.similarity.toFixed(2)}</span>`
+        : `<span style="opacity:.8">Not sure. Best guess</span> <b>${esc(best.sign.name)}?</b> <span style="opacity:.7">${best.similarity.toFixed(2)}</span>`;
+      const also = rest.slice(0, 2).map((g) => `${esc(g.sign.name)} ${g.similarity.toFixed(2)}`).join(' · ');
+      const lessonLine = lesson ? `<div style="color:${match ? '#5fd38d' : '#e0c060'}">${match ? 'Matches' : 'Doesn\'t match'} the lesson sign "${esc(lesson.gloss)}"</div>` : '';
+      model.innerHTML = `<div>Model: ${head}</div><div style="opacity:.7;font-size:12px">then ${also}</div>${lessonLine}`;
+    },
+    draw(f: CameraFrame, slots: [CameraHand | null, CameraHand | null], held: [boolean, boolean]) {
+      const w = (canvas.width = canvas.clientWidth * devicePixelRatio), h = (canvas.height = canvas.clientHeight * devicePixelRatio);
       const ctx = canvas.getContext('2d')!;
       ctx.clearRect(0, 0, w, h);
-      f.hands.forEach((hand, k) => {
-        ctx.fillStyle = colours[slots && slots[1] === k ? 1 : 0];
-        for (const p of hand.image) { ctx.beginPath(); ctx.arc((1 - p.x) * w, p.y * h, 2.2 * devicePixelRatio, 0, 7); ctx.fill(); }
+      // Shown as a mirror. Tracking runs on the camera's own frames (flipped back first if "Flip camera" is on), so
+      // landmark x is mirrored for drawing.
+      video.style.transform = vision.mirrored ? 'none' : 'scaleX(-1)';
+      const at = (p: { x: number; y: number }): [number, number] => [(1 - p.x) * w, p.y * h];
+      if (f.pose) {
+        ctx.strokeStyle = 'rgba(255,255,255,.5)';
+        ctx.lineWidth = 2 * devicePixelRatio;
+        for (const [a, b] of [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16]]) {
+          ctx.beginPath(); ctx.moveTo(...at(f.pose.image[a])); ctx.lineTo(...at(f.pose.image[b])); ctx.stroke();
+        }
+      }
+      slots.forEach((hand, s) => {
+        if (!hand) return;
+        ctx.globalAlpha = held[s] ? 0.35 : 1;
+        ctx.strokeStyle = ctx.fillStyle = COLOURS[s];
+        ctx.lineWidth = 2.2 * devicePixelRatio;
+        for (const [a, b] of BONES) { ctx.beginPath(); ctx.moveTo(...at(hand.image[a])); ctx.lineTo(...at(hand.image[b])); ctx.stroke(); }
+        for (const p of hand.image) { ctx.beginPath(); ctx.arc(...at(p), 2.6 * devicePixelRatio, 0, 7); ctx.fill(); }
       });
-      label.textContent = f.pose ? `Webcam hands: ${f.hands.length} seen` : 'Webcam hands: step back so your shoulders show';
+      ctx.globalAlpha = 1;
+      const n = slots.filter(Boolean).length;
+      label.textContent = !f.pose ? 'Sit back so your head and shoulders show'
+        : n === 0 ? 'Raise your hands into view' : `Tracking ${n === 2 ? 'both hands' : slots[0] ? 'your right hand' : 'your left hand'}`;
     },
-    remove() { box.remove(); },
+    remove() { box.remove(); setControls(true); },
   };
 }
 
@@ -124,13 +194,33 @@ export async function startWebcamHands(onStatus: (text: string) => void = () => 
   if (!device) throw new Error("The headset emulator isn't running (development builds on localhost only).");
   const vision: Vision = await openVision(onStatus);
   device.primaryInputMode = 'hand';
-  const view = preview(vision.video);
-  const builder = new CameraFrameBuilder();
+  const view = preview(vision, device);
+  const tracker = new CameraTracker();
+  // The recogniser reads unsmoothed frames, as the references were made.
+  const readTracker = new CameraTracker();
+  readTracker.smooth = false;
+  readTracker.holdMs = 0;
+  const readFrame = emptyFrame();
+  view.onFlip(() => { tracker.reset(); readTracker.reset(); });
+  // A webcam sees hands less precisely than a headset: start the lesson check at its gentlest.
+  app.updateSettings({ strictness: 2 });
+  let reader: SignReader | null = null;
+  SignReader.load((t) => t && view.modelStatus(`Model: ${t.toLowerCase()}`)).then(
+    (r) => { reader = r; view.modelStatus(`Model: ready. Sign something; it knows ${r.signCount} signs.`); },
+    (err) => view.modelStatus(`Model unavailable: ${(err as Error).message}`));
   const frame = emptyFrame();
   vision.run((f) => {
-    view.draw(f, f.pose ? assignSlots(f.hands, f.pose.image) : null);
-    const ok = builder.build(f.hands, f.pose, frame);
-    (window as { __webcamFrame?: Frame }).__webcamFrame = frame; // for checking what the app reads back
+    const { ok, slots, held } = tracker.update(f, frame);
+    view.draw(f, slots, held);
+    if (reader && readTracker.update(f, readFrame).ok) {
+      const pending = reader.push(readFrame, f.time);
+      if (pending) {
+        const sign = app.current;
+        view.modelStatus('Model: reading…');
+        pending.then((r) => view.reading(r, sign ? { gloss: sign.gloss, aliases: sign.aliases } : null), () => view.modelStatus('Model: could not read that sign.'));
+      }
+    }
+    Object.assign(window, { __webcamFrame: frame, __webcamTracker: tracker }); // for checking what the app reads back
     const head: V3 = [device.position.x, device.position.y, device.position.z];
     const axes = headAxes(device.quaternion);
     [device.hands.right, device.hands.left].forEach((hand: any, s: number) => {

@@ -12,6 +12,9 @@ interface Landmarker { detectForVideo(video: HTMLVideoElement, ms: number): any;
 
 export interface Vision {
   video: HTMLVideoElement;
+  /** True when frames are flipped before tracking, for a camera that delivers a mirror image (selfie-style). */
+  readonly mirrored: boolean;
+  setMirrored(on: boolean): void;
   /** Calls `onFrame` with each new camera frame's landmarks until `stop`. */
   run(onFrame: (f: CameraFrame) => void): void;
   stop(): void;
@@ -21,7 +24,8 @@ export interface Vision {
 export async function openVision(onStatus: (text: string) => void = () => {}): Promise<Vision> {
   onStatus('Asking for the camera…');
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }, audio: false,
+    // 720p if the camera has it: MediaPipe crops each hand from the frame, so more pixels mean steadier fingers.
+    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false,
   });
   const video = document.createElement('video');
   Object.assign(video, { srcObject: stream, muted: true, playsInline: true });
@@ -47,15 +51,26 @@ export async function openVision(onStatus: (text: string) => void = () => {}): P
   });
   onStatus('');
 
-  let running = false, last = -1;
+  let running = false, last = -1, mirrored = false;
+  // A mirrored camera's frames are flipped back before tracking, so MediaPipe sees the signer as on video.
+  const flip = document.createElement('canvas');
+  const flipCtx = flip.getContext('2d')!;
+  const source = (): HTMLVideoElement | HTMLCanvasElement => {
+    if (!mirrored) return video;
+    if (flip.width !== video.videoWidth) { flip.width = video.videoWidth; flip.height = video.videoHeight; }
+    flipCtx.setTransform(-1, 0, 0, 1, flip.width, 0);
+    flipCtx.drawImage(video, 0, 0);
+    return flip;
+  };
   const step = () => {
     if (!running) return;
     if (video.readyState >= 2) {
       const ms = Math.max(performance.now(), last + 1); // MediaPipe needs increasing timestamps
       if (ms !== last) {
         last = ms;
-        const h = hands.detectForVideo(video, ms);
-        const p = pose.detectForVideo(video, ms);
+        const frame = source() as HTMLVideoElement;
+        const h = hands.detectForVideo(frame, ms);
+        const p = pose.detectForVideo(frame, ms);
         const labels = h.handedness ?? h.handednesses ?? [];
         frameHandler?.({
           hands: h.landmarks.map((image: Point[], k: number) => ({ image, world: h.worldLandmarks[k], label: labels[k]?.[0]?.categoryName ?? '' })),
@@ -74,6 +89,8 @@ export async function openVision(onStatus: (text: string) => void = () => {}): P
 
   return {
     video,
+    get mirrored() { return mirrored; },
+    setMirrored(on) { mirrored = on; },
     run(onFrame) { frameHandler = onFrame; if (!running) { running = true; schedule(); } },
     stop() {
       running = false;

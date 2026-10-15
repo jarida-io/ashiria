@@ -20,7 +20,7 @@ export interface BodyFrame { axes: [V3, V3, V3]; nose: V3; width: number; wrists
 const v = (p: Point): V3 => [p.x, p.y, p.z];
 
 /** Which detection goes in each slot ([signer's right, left], -1 for none). With a body pose, each hand goes to the
- * nearer pose wrist; without, MediaPipe's label, which assumes a mirrored image, so "Left" is the signer's right. */
+ * nearer pose wrist; without, MediaPipe's label, which names the hand itself on an unmirrored camera image. */
 export function assignSlots(hands: CameraHand[], poseImage: Point[] | null): [number, number] {
   const out: [number, number] = [-1, -1];
   if (!hands.length) return out;
@@ -39,7 +39,7 @@ export function assignSlots(hands: CameraHand[], poseImage: Point[] | null): [nu
     // The same label twice: the signer's right hand is on the left of the image.
     return hands[0].image[WRIST].x <= hands[1].image[WRIST].x ? [0, 1] : [1, 0];
   }
-  hands.slice(0, 2).forEach((h, k) => { out[h.label === 'Left' ? 0 : 1] = k; });
+  hands.slice(0, 2).forEach((h, k) => { out[h.label === 'Right' ? 0 : 1] = k; });
   return out;
 }
 

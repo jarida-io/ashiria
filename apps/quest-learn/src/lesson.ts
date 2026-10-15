@@ -12,7 +12,8 @@ import { saveTake } from './studio.js';
 
 const UI_GUARD_MS = 700;        // an attempt that starts this soon after a panel click is the click, not a sign
 const REST_WAIT_S = 1.0, REST_SAMPLE_S = 2.0;
-const STRICTNESS = [[0.85, 'Strict'], [1, 'Normal'], [1.25, 'Relaxed'], [1.5, 'Easy']] as const;
+// Tolerance scales. "Very easy" is for webcam previews, which see hands less precisely than a headset.
+const STRICTNESS = [[0.85, 'Strict'], [1, 'Normal'], [1.25, 'Relaxed'], [1.5, 'Easy'], [2, 'Very easy']] as const;
 
 type Element = { setProperties(p: Record<string, unknown>): void; addEventListener(t: string, f: () => void): void; removeEventListener(t: string, f: () => void): void };
 
