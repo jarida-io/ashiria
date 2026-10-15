@@ -19,7 +19,9 @@ export interface LearnState {
 
 interface Piece { phase: Phase; seconds: number; f0: number; f1: number; step: number; text: string }
 
-const RISE_SPEED = 0.75, MOVE_SPEED = 0.5, END_SPEED = 0.6, HOLD_S = 1.5, REST_S = 0.9;
+const RISE_SPEED = 0.75, MOVE_SPEED = 0.5, END_SPEED = 0.6, REST_S = 0.9;
+/** Long enough to read the step: about a third of a second a word, between 2 and 4.5 seconds. */
+const holdFor = (text: string) => Math.min(4.5, Math.max(2, 0.8 + 0.3 * text.split(/\s+/).length));
 
 export class LearnPlayer {
   readonly pieces: Piece[] = [];
@@ -44,7 +46,7 @@ export class LearnPlayer {
       steps.forEach((s, i) => {
         const speed = s.kind === 'start' ? RISE_SPEED : s.kind === 'end' ? END_SPEED : MOVE_SPEED;
         play(at, s.key, speed, 'move', i, s.text);
-        this.pieces.push({ phase: 'hold', seconds: HOLD_S, f0: s.key, f1: s.key, step: i, text: s.text });
+        this.pieces.push({ phase: 'hold', seconds: holdFor(s.text), f0: s.key, f1: s.key, step: i, text: s.text });
         at = s.key;
       });
       play(at, last, 1, 'rest', steps.length - 1, steps[steps.length - 1].text); // back down to rest, normal speed

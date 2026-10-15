@@ -1,8 +1,9 @@
 /**
  * The avatar coach: a figure standing in front of the learner, facing them, that signs the current sign one step at
  * a time (start, each movement, end), slowly, pausing on each key moment; the moving hand glows and the step's path
- * is drawn. The step's caption is shown on the lesson panel (LessonSystem reads `caption`). Hidden while signing
- * from memory (recall) and in Free Sign, like the shadow hands.
+ * is drawn. The step's caption is shown on the lesson panel (LessonSystem reads `caption`). When the learner moves
+ * on to signing from memory (recall) the coach finishes its demonstration and waits at rest, showing the sign again
+ * after each miss. Hidden in Free Sign.
  *
  * Development only for now: each sign's avatar (pose and steps) comes from the dev server (/dev/avatar/<sign>).
  * Shipping it means adding the avatar data to the content pack.
@@ -25,6 +26,10 @@ export class AvatarCoachSystem extends createSystem({}) {
   private placed = false;
   private placedAt = new Vector3();
   private immersiveFor = 0;
+  /** Recall: keep demonstrating until this time (the current loop, or one more after a miss), then wait at rest. */
+  private demoUntil = Infinity;
+  private lastMisses = 0;
+  private lastPhase = '';
   /** The current step, for the lesson panel ('' when there is none). */
   caption = '';
 
@@ -52,6 +57,7 @@ export class AvatarCoachSystem extends createSystem({}) {
       this.learner = pose ? new LearnPlayer(pose) : null;
       this.clock = 0;
       this.lastStep = -2;
+      this.demoUntil = Infinity;
     } catch {
       this.learner = null;
     } finally {
@@ -79,25 +85,41 @@ export class AvatarCoachSystem extends createSystem({}) {
   update(delta: number): void {
     const info = app.current;
     if (import.meta.env.DEV && info && info.id !== this.signId && !this.loading) void this.load(info.id);
-    const show = !!info && !!this.learner && app.mode !== 'free' && !(app.mode === 'practice' && app.phase === 'recall');
+    const show = !!info && !!this.learner && app.mode !== 'free';
     const g = this.figure.group;
     g.visible = show;
     if (!show) { this.caption = ''; return; }
+    const learner = this.learner!;
+    const recall = app.mode === 'practice' && app.phase === 'recall';
+    // Entering recall: finish the demonstration in progress. A miss in recall: show it once more from the start.
+    if (recall && this.lastPhase !== 'recall') this.demoUntil = (Math.floor(this.clock / learner.duration) + 1) * learner.duration;
+    if (!recall) this.demoUntil = Infinity;
+    if (recall && app.misses > this.lastMisses) { this.clock = 0; this.demoUntil = learner.duration; }
+    this.lastPhase = recall ? 'recall' : app.phase;
+    this.lastMisses = app.misses;
     // Place once the headset's pose has arrived (half a second into the session), and again if the learner moves
     // well away from where it was placed (stands up, walks).
     if (this.world.visibilityState.value !== VisibilityState.NonImmersive) this.immersiveFor += delta;
     const head = this.world.camera.getWorldPosition(new Vector3());
     if (this.placed && head.distanceTo(this.placedAt) > 0.6) this.placed = false;
     if (!this.placed && this.immersiveFor > 0.5) this.place();
+    if (this.clock >= this.demoUntil) {
+      // Waiting at rest while the learner signs from memory.
+      this.figure.setFrame(0);
+      this.figure.setHighlight([]);
+      if (this.lastStep !== -3) { this.figure.setTrail(0, 0, []); this.lastStep = -3; }
+      this.caption = 'Your turn: sign it from memory. I will show it again if you miss.';
+      return;
+    }
     this.clock += delta;
-    const s = this.learner!.at(this.clock);
+    const s = learner.at(this.clock);
     this.figure.setFrame(s.frame);
     this.figure.setHighlight(s.phase === 'move' ? s.hands : []);
     if (s.step !== this.lastStep) {
       this.figure.setTrail(s.from, s.to, s.step >= 0 ? s.hands : []);
       this.lastStep = s.step;
     }
-    this.caption = s.step >= 0 && s.text ? `Step ${s.step + 1} of ${this.learner!.steps.length}: ${s.text}` : '';
+    this.caption = s.step >= 0 && s.text ? `Step ${s.step + 1} of ${learner.steps.length}: ${s.text}` : '';
   }
 
   /** Stand in front of the learner again (after they turn or move). */
