@@ -4,9 +4,10 @@ The dictionary has one video per sign, all by one signer, so a classifier can't 
 SignNet's encoder learns an **embedding**: two differently augmented copies of the same sign land close together,
 different signs far apart (contrastive learning, NT-Xent). Recognition is then the nearest reference embedding.
 
-Evaluation uses simulated attempts (the calibration augmentations, cut by the real attempt segmenter) and compares
-with DTW matching (the current Free Sign). Both use the same signer as the references, so this measures
-robustness to the variation we simulate, not accuracy on other people: that needs Jerry's Quest attempts.
+Evaluation uses simulated attempts (the calibration augmentations, cut by the real attempt segmenter set to take
+whole signs, see WHOLE_SIGN) and compares with DTW matching (the current Free Sign) on the same references. Both
+use the same signer as the references, so this measures robustness to the variation we simulate, not accuracy on
+other people: that needs Jerry's Quest attempts.
 """
 
 from __future__ import annotations
@@ -35,6 +36,14 @@ from .pipeline import cut_reference
 from .train import pick_device
 
 DICTIONARY_CONFIG = "configs/ksl_dictionary.yaml"
+# The recogniser takes whole signs: an attempt ends when the hands drop (or after 10 s), not when a hand holds still.
+# Verify ends a single sign at its hold, but that cut a phrase down to its first sign: "I Lost My Bag" kept 0.7 s of
+# 4.6 s, so phrases that start alike became the same reference. Only segmenter settings change, not engine code.
+WHOLE_SIGN = {"hold_s": 11.0, "max_attempt_s": 10.0}
+
+
+def recogniser_params(p: EngineParams) -> EngineParams:
+    return dataclasses.replace(p, segmenter=dataclasses.replace(p.segmenter, **WHOLE_SIGN))
 
 
 def load_references(p: EngineParams) -> tuple[list[str], list[Segment], list[str]]:
@@ -42,7 +51,8 @@ def load_references(p: EngineParams) -> tuple[list[str], list[Segment], list[str
     Cached in the dictionary cache folder (local, git-ignored) because cutting 2,646 clips takes about a minute, and
     rebuilt when `ashiria import-dictionary` changes the labels."""
     dcfg = load_config(DICTIONARY_CONFIG)
-    cache = path(dcfg, "cache") / f"embed_refs_seq{p.seq_len}.npz"
+    sp = p.segmenter
+    cache = path(dcfg, "cache") / f"embed_refs_seq{p.seq_len}_hold{sp.hold_s:g}_max{sp.max_attempt_s:g}.npz"
     labels_csv = path(dcfg, "manifests") / "dictionary_labels.csv"
     if cache.exists() and (not labels_csv.exists() or cache.stat().st_mtime > labels_csv.stat().st_mtime):
         with np.load(cache) as d:  # each d[key] decompresses the whole array, so read each once
@@ -179,7 +189,7 @@ def evaluate(model, labels, refs, ref_feats, device, p: EngineParams, aug: dict,
 def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: float = 0.1, seed: int = 7,
               attempts: int = 4) -> Path:
     torch.manual_seed(seed)
-    p = EngineParams.from_config(cfg)
+    p = recogniser_params(EngineParams.from_config(cfg))
     t0 = time.time()
     labels, refs, _ = load_references(p)
     print(f"{len(refs)} dictionary references ({time.time() - t0:.0f} s)")
@@ -224,6 +234,7 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
     print("Evaluating on simulated attempts...")
     report = {
         "note": "one signer, simulated variation: robustness to augmentation, not accuracy on other people",
+        "cut": "whole signs: an attempt ends when the hands drop (up to 10 s), not at a hold",
         "references": len(refs), "epochs": epochs,
         "vocabulary": evaluate(model, labels, refs, ref_feats, device, p, dict(cfg.calibrate.augment), chosen, attempts, seed),
         "other_signs": evaluate(model, labels, refs, ref_feats, device, p, dict(cfg.calibrate.augment), others, 2, seed + 1),
@@ -265,7 +276,7 @@ def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: 
     if run is None:
         raise SystemExit("No embed run with a model yet: run `ashiria embed` first.")
     t0 = time.time()
-    p = EngineParams.from_config(cfg)
+    p = recogniser_params(EngineParams.from_config(cfg))
     labels, refs, ids = load_references(p)
     feats = [sequence_features(r.hand_rel, r.wrist_pos, r.present, 1.0 / r.fps) for r in refs]
     device = pick_device(str(cfg.train.device))
