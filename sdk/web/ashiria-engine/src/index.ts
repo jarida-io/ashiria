@@ -1,4 +1,5 @@
 /** Ashiria engine for the web: the TypeScript port of training/ (Python reference), parity-tested on spec/golden. */
+export * from './camera.ts';
 export * from './canonical.ts';
 export * from './clock.ts';
 export * from './features.ts';

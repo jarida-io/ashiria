@@ -303,3 +303,59 @@ def build_runtime_golden(cfg: Config) -> str:
           f"mini pack -> {final}")
     return str(out)
 
+
+
+def build_camera_golden(cfg: Config) -> str:
+    """Camera input for the web app (engine mediapipe.ts): synthetic MediaPipe landmarks in an arbitrary camera
+    orientation, with Python's from_mediapipe (per frame) and assign_slots as the expected answers."""
+    from .canonical import from_mediapipe
+    from .extract import assign_slots
+
+    rng = np.random.default_rng(31)
+    T = 10
+    # A body in its own frame (x to the signer's right, y up, z forward; metres from the hips), turned a little each
+    # frame, then seen through a random camera rotation: the frame must come out the same whatever the axes.
+    q, _ = np.linalg.qr(rng.normal(size=(3, 3)))
+    camera = q * np.sign(np.linalg.det(q))
+    body = {J.POSE_NOSE: (0, 0.62, 0.1), 2: (-0.03, 0.66, 0.08), 5: (0.03, 0.66, 0.08), J.POSE_LEFT_EAR: (-0.075, 0.64, 0.0),
+            J.POSE_RIGHT_EAR: (0.075, 0.64, 0.0), J.POSE_LEFT_SHOULDER: (-0.18, 0.42, 0.0), J.POSE_RIGHT_SHOULDER: (0.18, 0.42, 0.0),
+            J.POSE_LEFT_WRIST: (-0.15, 0.2, 0.3), J.POSE_RIGHT_WRIST: (0.12, 0.35, 0.35)}
+    pose = np.zeros((T, 33, 3))
+    for t in range(T):
+        yaw = rng.normal(0, 0.25)
+        turn = np.array([[np.cos(yaw), 0, np.sin(yaw)], [0, 1, 0], [-np.sin(yaw), 0, np.cos(yaw)]])
+        for k, v in body.items():
+            pose[t, k] = camera @ (turn @ np.asarray(v, float) + rng.normal(0, 0.004, 3))
+    hand_world = rng.normal(0, 0.035, (T, 2, 21, 3))
+    hand_present = rng.random((T, 2)) > 0.2
+    data = {"hand_present": hand_present, "pose_present": np.ones(T, bool), "pose_world": pose, "hand_world": hand_world,
+            "fps": np.float32(30)}
+    seg, why = from_mediapipe(data)
+    assert seg is not None, why
+
+    # Slot assignment: image-space wrists (x, y in 0..1), with and without a body pose, in both detection orders.
+    pose_image = np.zeros((33, 4))
+    pose_image[J.POSE_RIGHT_WRIST, :2], pose_image[J.POSE_LEFT_WRIST, :2] = (0.35, 0.6), (0.7, 0.55)
+    def det(x, y, label):
+        lm = np.zeros((21, 3))
+        lm[J.WRIST] = (x, y, 0)
+        return (lm, None, label)
+    cases = []
+    for dets, with_pose in [([det(0.36, 0.58, "Left"), det(0.69, 0.57, "Right")], True),
+                            ([det(0.69, 0.57, "Right"), det(0.36, 0.58, "Left")], True),
+                            ([det(0.68, 0.5, "Left")], True),
+                            ([det(0.3, 0.5, "Left"), det(0.7, 0.5, "Right")], False),
+                            ([det(0.7, 0.5, "Right"), det(0.3, 0.5, "Right")], False),
+                            ([det(0.5, 0.5, "Right")], False)]:
+        slots = assign_slots(dets, pose_image if with_pose else None)
+        cases.append({"wrists": [d[0][J.WRIST, :2].tolist() for d in dets], "labels": [d[2] for d in dets],
+                      "pose_wrists": pose_image[[J.POSE_RIGHT_WRIST, J.POSE_LEFT_WRIST], :2].tolist() if with_pose else None,
+                      "slots": {str(k): int(v) for k, v in slots.items()}})
+
+    golden = {"format": "ashiria.camera-golden", "frames": [
+        {"pose_world": _arr(pose[t], 9), "hand_world": _arr(hand_world[t], 9), "hand_present": hand_present[t].tolist(),
+         "hand_rel": _arr(seg.hand_rel[t], 9), "wrist_pos": _arr(seg.wrist_pos[t], 9), "present": seg.present[t].tolist()}
+        for t in range(T)], "slots": cases}
+    out = TRAINING_DIR.parent / "spec" / "golden" / "camera_v1.json"
+    out.write_text(json.dumps(golden))
+    return str(out)

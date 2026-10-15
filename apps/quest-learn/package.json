@@ -18,9 +18,11 @@
   "dependencies": {
     "@ashiria/engine": "file:../../sdk/web/ashiria-engine",
     "@iwsdk/core": "1.0.1",
+    "@mediapipe/tasks-vision": "1.0.1",
     "@pmndrs/uikit": "^1.0.74",
     "@pmndrs/uikit-horizon": "^1.0.74",
     "@pmndrs/uikit-lucide": "^1.0.74",
+    "onnxruntime-web": "1.30.0",
     "three": "npm:super-three@0.181.0"
   },
   "devDependencies": {

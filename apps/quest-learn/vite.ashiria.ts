@@ -11,6 +11,8 @@
  *   sheet, with MediaPipe's landmarks drawn over its video, the reference Ashiria would cut from it, audit flags and
  *   the recogniser's results (signs.json of the newest training/runs/embed- run), and an avatar (dev/avatar.js)
  *   that signs each clip from its landmarks. The videos never leave this Mac.
+ * - /web: the web app (web.html), a camera instead of a headset; /dev/recogniser/* and /dev/mediapipe/* serve its
+ *   recogniser (training/exports/recogniser) and MediaPipe's models (training/models/mediapipe).
  *
  * Production builds only bundle packs from public/packs/, and refuse any that is not a release pack
  * (`ashiria pack --release`: Studio-recorded, approved signs only).
@@ -28,6 +30,11 @@ const TRAINING = join(ROOT, 'training');
 const ASHIRIA = join(TRAINING, '.venv/bin/ashiria');
 const VIDEO_ROOT = join(TRAINING, 'data');
 const RUNS = join(TRAINING, 'runs');
+// The web app's recogniser (`ashiria export-recogniser`) and MediaPipe's models, served from where they are.
+const RECOGNISER = join(TRAINING, 'exports/recogniser');
+const MEDIAPIPE = join(TRAINING, 'models/mediapipe');
+const RECOGNISER_FILES: Record<string, string> = { 'meta.json': 'application/json', 'refs.f32': 'application/octet-stream', 'model.onnx': 'application/octet-stream' };
+const MEDIAPIPE_FILES = ['hand_landmarker.task', 'pose_landmarker_full.task'];
 const REVIEW = ['approved', 'rejected', 'draft'];
 // The sign browser's index is rebuilt when these change (re-import or re-audit of the dictionary).
 const INDEX_INPUTS = ['dictionary_labels.csv', 'dictionary_audit.csv'].map((f) => join(TRAINING, 'data/dictionary/manifests', f));
@@ -186,6 +193,27 @@ export function ashiriaDev(): Plugin {
         } catch (err) {
           return send(res, 500, { error: String(err) });
         }
+      });
+
+      // The web app (camera instead of headset): web.html, served as is so the headset emulator isn't injected.
+      server.middlewares.use('/web', (req, res, next) => {
+        const url = (req.url ?? '/').split('?')[0];
+        if (url !== '/' && url !== '') return next();
+        return send(res, 200, readFileSync(join(__dirname, 'web.html'), 'utf8'), 'text/html');
+      });
+      server.middlewares.use('/dev/recogniser', (req, res) => {
+        const name = (req.url ?? '/').split('?')[0].replace(/^\//, '');
+        const file = join(RECOGNISER, name);
+        if (!RECOGNISER_FILES[name] || !existsSync(file)) return send(res, 404, { error: 'no recogniser yet: run `ashiria export-recogniser`' });
+        res.writeHead(200, { 'Content-Type': RECOGNISER_FILES[name], 'Content-Length': statSync(file).size, 'Cache-Control': 'no-cache' });
+        createReadStream(file).pipe(res);
+      });
+      server.middlewares.use('/dev/mediapipe', (req, res) => {
+        const name = (req.url ?? '/').split('?')[0].replace(/^\//, '');
+        const file = join(MEDIAPIPE, name);
+        if (!MEDIAPIPE_FILES.includes(name) || !existsSync(file)) return send(res, 404, { error: 'not found' });
+        res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': statSync(file).size, 'Cache-Control': 'max-age=86400' });
+        createReadStream(file).pipe(res);
       });
 
       server.middlewares.use('/dev/studio', async (req, res) => {

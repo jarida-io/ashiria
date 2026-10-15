@@ -22,6 +22,28 @@ export function setupLanding(world: World): void {
   else nav.xr.isSessionSupported('immersive-ar').then(ready, () => ready(false));
 
   start.addEventListener('click', () => world.launchXR());
+
+  // Development only (removed from production builds): try the app on a desktop with your webcam driving the
+  // headset emulator's hands.
+  if (import.meta.env.DEV && (window as { IWER_DEVICE?: unknown }).IWER_DEVICE) {
+    const cam = document.createElement('button');
+    cam.id = 'start-webcam';
+    cam.textContent = 'Start with my webcam (desktop preview)';
+    cam.className = 'secondary';
+    start.after(cam);
+    cam.addEventListener('click', async () => {
+      cam.disabled = true;
+      try {
+        const { startWebcamHands } = await import('./webcam/emulate.js');
+        await startWebcamHands((text) => { note.textContent = text; });
+        note.textContent = 'Webcam on: sit back so your head and shoulders show, then sign. Video stays on this computer.';
+        world.launchXR();
+      } catch (err) {
+        note.textContent = `Couldn't start the webcam: ${(err as Error).message}`;
+        cam.disabled = false;
+      }
+    });
+  }
   over.addEventListener('click', () => {
     if (confirm('Start over? This clears your saved progress and settings on this device.')) {
       app.deleteMyData();
