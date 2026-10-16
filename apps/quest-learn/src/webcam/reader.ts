@@ -23,8 +23,6 @@ interface Meta {
 
 export class SignReader {
   readonly params: EngineParams;
-  /** Mirror attempts first, for a left-handed signer (the references are right-handed). */
-  leftHanded = false;
   /** Relaxed: accept a weaker match than the exported thresholds (set for 99.8% right on simulated attempts), for a
    * webcam, which sees hands less cleanly than the dictionary videos. */
   relaxed = true;
@@ -76,9 +74,23 @@ export class SignReader {
     return done ? this.read(done) : null;
   }
 
-  /** The recogniser's reading of one cut sign, or null if it has too little hand in it. */
+  /** The recogniser's reading of one cut sign, or null if it has too little hand in it. Each sign is read as it is
+   * and mirrored, keeping the closer match, so a left-handed signer or a mirrored camera needs no setting
+   * (`ashiria embed-views`: mirrored attempts 15% right as they are, 98.5% both ways; unmirrored ones unchanged). */
   async read(seg: Segment): Promise<Reading | null> {
-    const s = prepare(this.leftHanded ? mirror(seg) : seg, this.params, this.params.segmenter.rest_height);
+    const a = await this.similarities(seg); // one run at a time: a web session doesn't take two at once
+    const b = await this.similarities(mirror(seg));
+    const sims = a && b ? a.map((v, i) => Math.max(v, b[i])) : a ?? b;
+    if (!sims) return null;
+    const top = Array.from(sims.keys()).sort((x, y) => sims[y] - sims[x]).slice(0, 5);
+    const guesses = top.map((i) => ({ sign: this.meta.signs[i], similarity: sims[i] }));
+    const { sim, margin } = this.acceptance;
+    return { accepted: guesses[0].similarity >= sim && guesses[0].similarity - guesses[1].similarity >= margin, guesses };
+  }
+
+  /** Similarity of one sign to every reference (cosine of embeddings), or null if it has too little hand in it. */
+  private async similarities(seg: Segment): Promise<Float32Array | null> {
+    const s = prepare(seg, this.params, this.params.segmenter.rest_height);
     if (!s || s.length !== this.meta.frames) return null;
     const input = new this.ort.Tensor('float32', sequenceFeatures(s), [1, s.length, FEATURE_DIM]);
     const out = await this.session.run({ [this.session.inputNames[0]]: input });
@@ -90,10 +102,7 @@ export class SignReader {
       for (let k = 0; k < D; k++) d += this.refs[i * D + k] * e[k];
       sims[i] = d;
     }
-    const top = Array.from(sims.keys()).sort((a, b) => sims[b] - sims[a]).slice(0, 5);
-    const guesses = top.map((i) => ({ sign: this.meta.signs[i], similarity: sims[i] }));
-    const { sim, margin } = this.acceptance;
-    return { accepted: guesses[0].similarity >= sim && guesses[0].similarity - guesses[1].similarity >= margin, guesses };
+    return sims;
   }
 
   reset(): void { this.segmenter.reset?.(); this.clock.reset(); this.lastTime = -1; }
