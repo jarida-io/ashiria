@@ -1,0 +1,290 @@
+# Everyday KSL phrases: what the course can teach and the reader can expect, in KSL word order (glosses).
+#   gloss:    signs in the order they are signed; each is a KSL Dictionary sign name, or a letter for fingerspelling
+#   source:   attested (the gloss appears in Kenyan teaching material, see `ref`) or patterned (built by us from the
+#             attested patterns: time first, verb after its object, question word, NOTHING, MUST and FINISH last,
+#             possessive after the noun). Patterned phrases need a Deaf KSL signer's check before they ship.
+#   recorded: the dictionary's own video of the whole phrase, when there is one (real signing, real transitions)
+#   question: signed with a question face (raised or lowered brows), which the hands alone don't show
+# Sources: JOOUST and Kenyatta University KSL course materials, the Maseno AI4KSL paper (arXiv 2410.18295); see
+# docs/HACKATHON_PLAN.md for links.
+version: 0.1.0
+phrases:
+- id: good-morning
+  english: Good morning
+  topic: greetings
+  gloss: [good, morning]
+  source: patterned
+  recorded: Good Morning
+- id: good-afternoon
+  english: Good afternoon
+  topic: greetings
+  gloss: [good, afternoon]
+  source: patterned
+  recorded: Good Afternoon
+- id: good-night
+  english: Good night
+  topic: greetings
+  gloss: [good, night]
+  source: patterned
+  recorded: Good Night
+- id: how-are-you
+  english: How are you?
+  topic: greetings
+  gloss: [you, how]
+  source: patterned
+  question: true
+- id: im-fine
+  english: I'm fine
+  topic: greetings
+  gloss: [me, fine]
+  source: patterned
+  recorded: I'm Fine
+- id: im-fine-thanks
+  english: I'm fine, thank you
+  topic: greetings
+  gloss: [me, fine, thank you]
+  source: patterned
+  recorded: I'm Fine, Thank You
+- id: see-you-tomorrow
+  english: See you tomorrow
+  topic: greetings
+  gloss: [tomorrow, see, you]
+  source: patterned
+- id: my-name-is
+  english: My name is ...
+  topic: introductions
+  gloss: [name, mine]
+  source: attested
+  ref: JOOUST
+  recorded: My Name Is
+- id: your-name
+  english: What is your name?
+  topic: introductions
+  gloss: [name, your, what]
+  source: patterned
+  question: true
+  recorded: What Is Your Name?
+- id: where-live
+  english: Where do you live?
+  topic: introductions
+  gloss: [you, live, where]
+  source: patterned
+  question: true
+  recorded: Where Do You Live?
+- id: live-nairobi
+  english: I live in Nairobi
+  topic: introductions
+  gloss: [me, live, nairobi]
+  source: patterned
+- id: how-old
+  english: How old are you?
+  topic: introductions
+  gloss: [you, old, how many]
+  source: patterned
+  question: true
+  recorded: How Old Are You?
+- id: where-from
+  english: Where are you from?
+  topic: introductions
+  gloss: [you, from, where]
+  source: patterned
+  question: true
+  recorded: Where Are You From?
+- id: im-deaf
+  english: I'm deaf
+  topic: introductions
+  gloss: [me, deaf]
+  source: patterned
+  recorded: I'm Deaf
+- id: are-you-deaf
+  english: Are you deaf?
+  topic: introductions
+  gloss: [you, deaf]
+  source: patterned
+  question: true
+- id: learning-ksl
+  english: I'm still learning sign language
+  topic: introductions
+  gloss: [me, sign, learn, now]
+  source: patterned
+  recorded: Am Still Learning
+- id: again-please
+  english: Again, please
+  topic: repair
+  gloss: [again, please]
+  source: patterned
+  recorded: Please Say That Again
+- id: slowly-please
+  english: Sign slowly, please
+  topic: repair
+  gloss: [sign, slow, please]
+  source: patterned
+  recorded: Please Speak More Slowly
+- id: dont-understand
+  english: I don't understand
+  topic: repair
+  gloss: [me, understand, not]
+  source: patterned
+  recorded: I Don't Understand
+- id: dont-know
+  english: I don't know
+  topic: repair
+  gloss: [me, know, not]
+  source: patterned
+  recorded: I Don't Know
+- id: sisters-how-many
+  english: How many sisters do you have?
+  topic: family
+  gloss: [sister, you, how many]
+  source: attested
+  ref: JOOUST
+  question: true
+- id: children-how-many
+  english: How many children do you have?
+  topic: family
+  gloss: [child, your, how many]
+  source: patterned
+  question: true
+  recorded: Do You Have Children?
+- id: family-big
+  english: My family is big
+  topic: family
+  gloss: [family, mine, big]
+  source: patterned
+- id: many-friends
+  english: I have many friends
+  topic: family
+  gloss: [friend, many, me, have]
+  source: attested
+  ref: JOOUST
+- id: school-tomorrow
+  english: I'm going to school tomorrow
+  topic: time
+  gloss: [tomorrow, primary school, me, go]
+  source: attested
+  ref: JOOUST
+- id: school-yesterday
+  english: I went to school yesterday
+  topic: time
+  gloss: [yesterday, primary school, me, go]
+  source: attested
+  ref: JOOUST
+- id: work-today
+  english: I'm going to work today
+  topic: time
+  gloss: [today, work, me, go]
+  source: patterned
+- id: your-job
+  english: What is your job?
+  topic: time
+  gloss: [work, your, what]
+  source: patterned
+  question: true
+  recorded: What's Your Job?
+- id: what-time
+  english: What time is it?
+  topic: time
+  gloss: [time, what]
+  source: patterned
+  question: true
+  recorded: What Time Is It?
+- id: church-sunday
+  english: I go to church on Sunday
+  topic: time
+  gloss: [sunday, church, me, go]
+  source: patterned
+- id: im-hungry
+  english: I'm hungry
+  topic: food
+  gloss: [me, hungry]
+  source: patterned
+  recorded: I'm Hungry
+- id: are-you-hungry
+  english: Are you hungry?
+  topic: food
+  gloss: [you, hungry]
+  source: patterned
+  question: true
+  recorded: Are You Hungry?
+- id: want-water
+  english: I want water
+  topic: food
+  gloss: [water, me, want]
+  source: patterned
+  recorded: I Need Water
+- id: want-tea
+  english: Do you want tea?
+  topic: food
+  gloss: [tea, you, want]
+  source: patterned
+  question: true
+- id: eaten
+  english: I have eaten
+  topic: food
+  gloss: [food, me, eat, finish]
+  source: patterned
+- id: im-sick
+  english: I'm sick
+  topic: health
+  gloss: [me, sick]
+  source: patterned
+  recorded: I'm Sick
+- id: call-doctor
+  english: Please call a doctor
+  topic: health
+  gloss: [doctor, call, please]
+  source: patterned
+  recorded: I Need A Doctor
+- id: hospital-where
+  english: Where is the hospital?
+  topic: health
+  gloss: [hospital, where]
+  source: patterned
+  question: true
+- id: medicine-taken
+  english: I have taken the medicine
+  topic: health
+  gloss: [medicine, me, take, finish]
+  source: patterned
+- id: sick-must-go
+  english: Sick people must go to hospital
+  topic: health
+  gloss: [people, sick, hospital, go, must]
+  source: attested
+  ref: JOOUST
+- id: not-improved
+  english: The woman is sick and has not improved
+  topic: health
+  gloss: [woman, sick, sick, improve, nothing]
+  source: attested
+  ref: JOOUST
+- id: toilet-where
+  english: Where is the toilet?
+  topic: places
+  gloss: [toilet, where]
+  source: patterned
+  question: true
+  recorded: Where Is The Toilet?
+- id: home-where
+  english: Where is your home?
+  topic: places
+  gloss: [home, your, where]
+  source: patterned
+  question: true
+- id: im-happy
+  english: I'm happy
+  topic: feelings
+  gloss: [me, happy]
+  source: patterned
+- id: im-tired
+  english: I'm tired
+  topic: feelings
+  gloss: [me, tired]
+  source: patterned
+  recorded: I'm Tired
+- id: kenya-big
+  english: Kenya, our country, is big
+  topic: feelings
+  gloss: [kenya, country, our, big]
+  source: attested
+  ref: JOOUST

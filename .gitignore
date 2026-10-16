@@ -22,3 +22,6 @@ obj/
 
 # Built content packs (may contain licensed or personal reference data)
 content/packs/
+
+# Frozen copy of the training code for a run in progress (embed.py workers re-import it every epoch)
+training/.snap/

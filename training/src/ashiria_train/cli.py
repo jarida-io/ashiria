@@ -84,11 +84,15 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--attempts", type=int, default=1)
     p = steps.add_parser("sign-groups", help="every sign by kind and into look-alike groups, with what tells them apart")
     p.add_argument("--run", help="run folder (default: the newest embed run)")
+    p = steps.add_parser("sentences-eval", help="reading signs in a row: random runs, the phrases, recorded phrases")
+    p.add_argument("--run", help="run folder (default: the newest embed run)")
     p = steps.add_parser("embed", help="experiment: sign embedding over all dictionary signs, compared with DTW")
     p.add_argument("--epochs", type=int, default=60)
     p.add_argument("--attempts", type=int, default=4)
     p.add_argument("--lookalike-share", type=float, default=0.5,
                    help="share of each batch given to look-alike neighbourhoods (needs `ashiria sign-groups`; 0 = random)")
+    p.add_argument("--context-share", type=float, default=0.0,
+                   help="share of training pairs where one view is the sign cut out of a sentence (phrases.py)")
     p = steps.add_parser("steps-check", help="how often the avatar's step captions agree with the dictionary descriptions")
     p.add_argument("--limit", type=int)
     p.add_argument("--rules", action="store_true", help="the hand-written rules only, without the fitted model")
@@ -203,9 +207,13 @@ def main(argv: list[str] | None = None) -> None:
     elif args.step == "sign-groups":
         from .groups import build_groups
         build_groups(cfg, args.run)
+    elif args.step == "sentences-eval":
+        from .sentences import evaluate_sentences
+        evaluate_sentences(cfg, args.run)
     elif args.step == "embed":
         from .embed import run_embed
-        run_embed(cfg, epochs=args.epochs, attempts=args.attempts, lookalike_share=args.lookalike_share)
+        run_embed(cfg, epochs=args.epochs, attempts=args.attempts, lookalike_share=args.lookalike_share,
+                  context_share=args.context_share)
     elif args.step == "catalogue":
         from .catalogue import update_catalogue
         update_catalogue(cfg, args.vocab, args.pack)

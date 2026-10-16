@@ -133,23 +133,67 @@ def _cut_references(p: EngineParams, dcfg) -> tuple[list[str], list[Segment], li
 
 class Views(Dataset):
     """Two augmented views of each reference, as feature sequences. Each view draws its variation from one of `augs`
-    at random (mild and stronger: see `training_variation`)."""
+    at random (mild and stronger: see `training_variation`). With `context`, one view of a pair is often the sign
+    cut out of a sentence (signed in a row with others, sentences.py), so the model learns a sign mid-sentence
+    looks like the sign on its own."""
 
-    def __init__(self, refs: list[Segment], augs: list[dict], seq_len: int, seed: int):
-        self.refs, self.augs, self.seq_len, self.seed = refs, augs, seq_len, seed
+    def __init__(self, refs: list[Segment], augs: list[dict], seq_len: int, seed: int, context: "Context | None" = None):
+        self.refs, self.augs, self.seq_len, self.seed, self.context = refs, augs, seq_len, seed, context
         self.epoch = 0
 
     def __len__(self) -> int:
         return len(self.refs)
 
-    def view(self, seg: Segment, rng) -> np.ndarray:
+    def view(self, seg: Segment, rng, window: bool = True) -> np.ndarray:
         aug = self.augs[int(rng.integers(len(self.augs)))]
-        s = resample(active_window(gap_fill(augment(seg, rng, aug), 5)), self.seq_len)
+        s = gap_fill(augment(seg, rng, aug), 5)
+        s = resample(active_window(s) if window else s, self.seq_len)
         return sequence_features(s.hand_rel, s.wrist_pos, s.present, 1.0 / s.fps)
 
     def __getitem__(self, i: int):
         rng = np.random.default_rng((self.seed, self.epoch, i))
-        return torch.from_numpy(self.view(self.refs[i], rng)), torch.from_numpy(self.view(self.refs[i], rng))
+        first = self.view(self.refs[i], rng)
+        if self.context is not None and rng.random() < self.context.share:
+            crop = self.context.crop(i, rng)
+            if crop is not None:
+                return torch.from_numpy(first), torch.from_numpy(self.view(crop, rng, window=False))
+        return torch.from_numpy(first), torch.from_numpy(self.view(self.refs[i], rng))
+
+
+class Context:
+    """Signs in sentences for training: reference i signed among others (a phrase it belongs to, else random
+    signs), cut out again with a bit of the transitions either side, the way a reader's window would see it."""
+
+    def __init__(self, ids: list[str], phrases: list[list[list[int]]], share: float, words: list[int] | None = None):
+        self.ids, self.share = ids, share
+        self.words = np.array(words if words is not None else range(len(ids)))  # neighbours: single signs
+        self.phrases_of: dict[int, list[tuple[list[list[int]], int]]] = {}
+        for p in phrases:
+            for k, opts in enumerate(p):
+                for i in opts:
+                    self.phrases_of.setdefault(i, []).append((p, k))
+
+    def crop(self, i: int, rng) -> Segment | None:
+        from .sentences import sentence
+
+        mine = self.phrases_of.get(i)
+        if mine and rng.random() < 0.75:
+            p, k = mine[int(rng.integers(len(mine)))]
+            run = [i if j == k else opts[int(rng.integers(len(opts)))] for j, opts in enumerate(p)]
+        else:
+            run = [int(x) for x in rng.choice(self.words, int(rng.integers(1, 4)), replace=False) if x != i]
+            k = int(rng.integers(len(run) + 1))
+            run.insert(k, i)
+        out = sentence([self.ids[j] for j in run], rng)
+        if out is None:
+            return None
+        seg, spans = out
+        a, b = spans[k]
+        before = (a - spans[k - 1][1]) if k > 0 else 0
+        after = (spans[k + 1][0] - b) if k + 1 < len(spans) else 0
+        a = max(0, a - int(rng.uniform(0, 0.6) * before) + int(rng.uniform(0, 0.08) * (b - a)))
+        b = min(len(seg), b + int(rng.uniform(0, 0.6) * after) - int(rng.uniform(0, 0.08) * (b - a)))
+        return seg.slice(a, b) if b - a >= 6 else None
 
 
 class LookalikeBatches(Sampler):
@@ -285,13 +329,24 @@ def evaluate(model, labels, refs, ref_feats, device, p: EngineParams, aug: dict,
 
 
 def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: float = 0.1, seed: int = 7,
-              attempts: int = 4, lookalike_share: float = 0.5) -> Path:
+              attempts: int = 4, lookalike_share: float = 0.5, context_share: float = 0.0) -> Path:
     torch.manual_seed(seed)
     p = recogniser_params(EngineParams.from_config(cfg))
     t0 = time.time()
     labels, refs, ref_ids = load_references(p)
     print(f"{len(refs)} dictionary references ({time.time() - t0:.0f} s)")
-    data = Views(refs, training_variation(cfg), p.seq_len, seed)
+    context = None
+    if context_share > 0:
+        from .phrases import load_phrases, phrase_clips
+        index = {c: i for i, c in enumerate(ref_ids)}
+        phrases = [[[index[c] for c in clips if c in index] for clips in pc] for ph in load_phrases()
+                   if (pc := phrase_clips(ph))]
+        from .groups import sign_kinds
+        words = [i for i, k in enumerate(sign_kinds(ref_ids).values()) if k["kind"] != "phrase"]
+        context = Context(ref_ids, [p for p in phrases if all(p)], context_share, words)
+        print(f"Signs in sentences: {context_share:.0%} of pairs, {len(context.phrases_of)} signs in "
+              f"{len(phrases)} phrases, the rest among random signs")
+    data = Views(refs, training_variation(cfg), p.seq_len, seed, context)
     ref_feats = [sequence_features(r.hand_rel, r.wrist_pos, r.present, 1.0 / r.fps) for r in refs]
     stack = np.stack(ref_feats).reshape(-1, ref_feats[0].shape[-1])
     device = pick_device(str(cfg.train.device))
@@ -335,7 +390,8 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
         if epoch % 10 == 0 or epoch == epochs - 1:
             print(f"epoch {epoch:3d}  loss {total / max(len(loader), 1):.3f}  ({time.time() - t0:.0f} s)", flush=True)
     torch.save({"state": model.state_dict(), "labels": labels, "epochs": epochs, "frames": p.seq_len,
-                "variation": training_variation(cfg), "lookalike_share": lookalike_share if sampler else 0.0},
+                "variation": training_variation(cfg), "lookalike_share": lookalike_share if sampler else 0.0,
+                "context_share": context_share},
                out / "model.pt")
     return evaluate_run(cfg, out, attempts, seed)
 
