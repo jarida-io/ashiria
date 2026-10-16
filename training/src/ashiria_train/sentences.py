@@ -111,45 +111,52 @@ def spot(model, ref_emb: np.ndarray, seg: Segment, frames: int, device) -> tuple
 
 
 def decode(wins: list[tuple[int, int]], sims: np.ndarray, length: int, floor: float, per_sign: float = 0.15,
-           names: list[str] | None = None, phrases: set[tuple[str, ...]] | None = None, bonus: float = 0.0) -> list[int]:
-    """The best run of non-overlapping windows. A window counts only where its sign matches better than in any
-    overlapping window (so one sign isn't read three times from shifted windows); each adds its similarity above
-    `floor`, less `per_sign` (so reading more signs has to be earned). A reading whose last signs (by `names`) make
-    one of `phrases` gains `bonus`, so a likely sentence can beat a slightly closer but unlikely one."""
-    longest = max((len(p) for p in phrases or ()), default=0)
-    top = sims.argmax(1)
-    best_sim = sims[np.arange(len(wins)), top]
+           names: list[frozenset[str]] | None = None, phrases: set[tuple[str, ...]] | None = None,
+           bonus: float = 0.0, candidates: int = 5, beam: int = 8) -> list[int]:
+    """The best run of non-overlapping windows. Each window offers its `candidates` closest signs, each where it
+    matches better than in any overlapping window (so one sign isn't read three times from shifted windows); a sign
+    adds its similarity above `floor`, less `per_sign` (so reading more signs has to be earned), and `bonus` when it
+    follows the previous sign the way they follow each other in one of `phrases` (by each reference's `names`: one
+    recording can carry several, like ME and I). So a likely sentence can beat a slightly closer but unlikely one,
+    even with a sign of the phrase missed. Without a bonus only each window's closest sign can win."""
+    pairs = {(a, b) for ph in phrases or () for a, b in zip(ph, ph[1:])} if bonus and names else set()
+    k = min(candidates if pairs else 1, sims.shape[1])
+    top = np.argsort(-sims, axis=1)[:, :k]
     starts, ends = np.array([a for a, _ in wins]), np.array([b for _, b in wins])
-    keep = []
+    ending: dict[int, list[tuple[int, int, float]]] = {}
     for w, (a, b) in enumerate(wins):
         overlap = (starts < b) & (ends > a)
-        same = overlap & (top == top[w])
-        if best_sim[w] - floor > per_sign and best_sim[w] >= best_sim[same].max():
-            keep.append(w)
-    ending: dict[int, list[int]] = {}
-    for w in keep:
-        ending.setdefault(wins[w][1], []).append(w)
-    best = [(0.0, ())] * (length + 1)  # best (score, reading) up to each frame
+        for sign in top[w]:
+            gain = float(sims[w, sign]) - floor - per_sign
+            if gain > -bonus and sims[w, sign] >= sims[overlap, sign].max():
+                ending.setdefault(b, []).append((w, int(sign), gain))
+    follows = lambda x, y: any((a, b) in pairs for a in names[x] for b in names[y])
+    states: list[list[tuple[float, tuple[int, ...]]]] = [[(0.0, ())]] + [[] for _ in range(length)]
     for t in range(1, length + 1):
-        best[t] = best[t - 1]
-        for w in ending.get(t, []):
-            score, reading = best[wins[w][0]]
-            reading = reading + (int(top[w]),)
-            score += best_sim[w] - floor - per_sign
-            if bonus and names and any(tuple(names[r] for r in reading[-n:]) in phrases
-                                       for n in range(2, min(longest, len(reading)) + 1)):
-                score += bonus
-            if score > best[t][0]:
-                best[t] = (score, reading)
-    return list(best[length][1])
+        options = list(states[t - 1])
+        for w, sign, gain in ending.get(t, []):
+            for score, reading in states[wins[w][0]]:
+                extra = bonus if pairs and reading and follows(reading[-1], sign) else 0.0
+                if gain + extra > 0:
+                    options.append((score + gain + extra, reading + (sign,)))
+        options.sort(key=lambda o: -o[0])
+        kept, seen = [], set()
+        for o in options:
+            if o[1] not in seen:
+                kept.append(o)
+                seen.add(o[1])
+            if len(kept) == beam:
+                break
+        states[t] = kept
+    return list(states[length][0][1]) if states[length] else []
 
 
-def edit_distance(a: list, b: list) -> int:
+def edit_distance(a: list, b: list, same=lambda x, y: x == y) -> int:
     d = list(range(len(b) + 1))
     for i, x in enumerate(a, 1):
         prev, d[0] = d[0], i
         for j, y in enumerate(b, 1):
-            prev, d[j] = d[j], min(d[j] + 1, d[j - 1] + 1, prev + (x != y))
+            prev, d[j] = d[j], min(d[j] + 1, d[j - 1] + 1, prev + (not same(x, y)))
     return d[len(b)]
 
 
@@ -181,8 +188,13 @@ def evaluate_sentences(cfg, run=None, seed: int = 1, count: int = 60) -> dict:
     from .groups import sign_kinds
     # Read sign by sign: a recorded phrase would otherwise be read whole, as itself (also right, but not this test).
     whole = np.array([k["kind"] == "phrase" for k in sign_kinds(ids).values()])
-    name_of = {c: name for name, clips in single.items() for c in clips}
-    names = [name_of.get(c, re.sub(r"\s+\d+$", "", labels[i].lower())) for i, c in enumerate(ids)]
+    # Every name each recording carries (a sign recorded once can be listed as ME and I): a reading is right when the
+    # sign read carries the expected name.
+    names_of: dict[str, set[str]] = {}
+    for name, clips in single.items():
+        for c in clips:
+            names_of.setdefault(c, set()).add(name)
+    names = [frozenset(names_of.get(c) or {re.sub(r"\s+\d+$", "", labels[i].lower())}) for i, c in enumerate(ids)]
     phrase_names = {tuple(t.lower() for t in ph["gloss"]) for ph in load_phrases()}
     rng = np.random.default_rng(seed)
 
@@ -193,7 +205,7 @@ def evaluate_sentences(cfg, run=None, seed: int = 1, count: int = 60) -> dict:
             if built is not None:
                 wins, sims = spot(model, ref_emb, built[0], p.seq_len, dev)
                 sims[:, whole] = -1.0
-                out.append(([names[i] for i in r], wins, sims, len(built[0])))
+                out.append(([names[i] for i in r], wins, sims, len(built[0])))  # each position: names it may carry
         return out
 
     words = np.flatnonzero(~whole)
@@ -213,24 +225,25 @@ def evaluate_sentences(cfg, run=None, seed: int = 1, count: int = 60) -> dict:
             if seg is not None:
                 wins, sims = spot(model, ref_emb, seg, p.seq_len, dev)
                 sims[:, whole] = -1.0
-                real.append(([t.lower() for t in ph["gloss"]], wins, sims, len(seg)))
+                real.append(([frozenset({t.lower()}) for t in ph["gloss"]], wins, sims, len(seg)))
     sets = {"random signs": cases_from(random_runs), "phrases (joined)": cases_from(phrase_runs),
             "phrases (recorded)": real}
 
     results = {}
     for floor in (0.7, 0.75, 0.8):
         for per in (0.15, 0.2, 0.25):
-            for bonus in (0.0, 0.3):
+            for bonus in (0.0, 0.1, 0.2):
                 key = f"floor {floor} per-sign {per} bonus {bonus}"
                 row = {}
                 for name, cases in sets.items():
                     errs = n = exact = found = 0
                     for truth, wins, sims, L in cases:
                         got = [names[i] for i in decode(wins, sims, L, floor, per, names, phrase_names, bonus)]
-                        errs += edit_distance(got, truth)
+                        same = lambda read, want: bool(read & want)
+                        errs += edit_distance(got, truth, same)
                         n += len(truth)
-                        exact += got == truth
-                        found += len(set(got) & set(truth))
+                        exact += len(got) == len(truth) and all(same(a, b) for a, b in zip(got, truth))
+                        found += sum(any(same(a, want) for a in got) for want in truth)
                     row[name] = {"cases": len(cases), "sign_error": round(errs / max(n, 1), 3),
                                  "exact": round(exact / max(len(cases), 1), 3), "signs_found": round(found / max(n, 1), 3)}
                 results[key] = row
