@@ -86,6 +86,11 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--run", help="run folder (default: the newest embed run)")
     p = steps.add_parser("sentences-eval", help="reading signs in a row: random runs, the phrases, recorded phrases")
     p.add_argument("--run", help="run folder (default: the newest embed run)")
+    p = steps.add_parser("lookalike-rounds", help="fine-tune the recogniser in rounds on the signs it mixes up")
+    p.add_argument("--start", required=True, help="run folder to start from")
+    p.add_argument("--rounds", type=int, default=3)
+    p.add_argument("--share", type=float, default=0.2)
+    p.add_argument("--epochs", type=int, default=10)
     p = steps.add_parser("embed", help="experiment: sign embedding over all dictionary signs, compared with DTW")
     p.add_argument("--epochs", type=int, default=60)
     p.add_argument("--attempts", type=int, default=4)
@@ -210,6 +215,9 @@ def main(argv: list[str] | None = None) -> None:
     elif args.step == "sentences-eval":
         from .sentences import evaluate_sentences
         evaluate_sentences(cfg, args.run)
+    elif args.step == "lookalike-rounds":
+        from .embed import lookalike_rounds
+        lookalike_rounds(cfg, args.start, args.rounds, args.share, args.epochs)
     elif args.step == "embed":
         from .embed import run_embed
         run_embed(cfg, epochs=args.epochs, attempts=args.attempts, lookalike_share=args.lookalike_share,

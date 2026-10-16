@@ -75,7 +75,9 @@ def part_distances(a: np.ndarray, b: np.ndarray) -> dict[str, float]:
     return out
 
 
-def build_groups(cfg: Config, run: str | Path | None = None, sample_pairs: int = 400, seed: int = 3) -> Path:
+def build_groups(cfg: Config, run: str | Path | None = None, sample_pairs: int = 400, seed: int = 3,
+                 confusion_runs: list[str | Path] | None = None) -> Path:
+    """Look-alikes from `run`'s model, plus the signs mistaken for each other in `confusion_runs` (default: `run`)."""
     from sklearn.cluster import AgglomerativeClustering
 
     from .embed import _load_model, embed_all, latest_run, load_references, recogniser_params
@@ -100,8 +102,10 @@ def build_groups(cfg: Config, run: str | Path | None = None, sample_pairs: int =
     # Look-alikes: close references, plus the signs simulated attempts were mistaken for.
     near = np.argsort(-sim, axis=1)[:, :NEIGHBOURS]
     confused: dict[int, set[int]] = {}
-    signs_json = run / "signs.json"
-    if signs_json.exists():
+    for past in [Path(r) for r in confusion_runs or [run]]:
+        signs_json = past / "signs.json"
+        if not signs_json.exists():
+            continue
         for clip, r in json.loads(signs_json.read_text())["results"].items():
             for test in ("normal", "harder", "viewpoint"):
                 for other in (r.get(test) or {}).get("mistaken_for", []):

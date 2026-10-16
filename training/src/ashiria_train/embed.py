@@ -329,7 +329,9 @@ def evaluate(model, labels, refs, ref_feats, device, p: EngineParams, aug: dict,
 
 
 def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: float = 0.1, seed: int = 7,
-              attempts: int = 4, lookalike_share: float = 0.5, context_share: float = 0.0) -> Path:
+              attempts: int = 4, lookalike_share: float = 0.5, context_share: float = 0.0,
+              init_run: str | Path | None = None, lr: float = 1e-3) -> Path:
+    """Train the recogniser (from scratch, or fine-tune `init_run`'s model), then test it (report.json, signs.json)."""
     torch.manual_seed(seed)
     p = recogniser_params(EngineParams.from_config(cfg))
     t0 = time.time()
@@ -354,9 +356,12 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
     model = Embedder(stack.shape[-1], 128, dim=int(m.dim), stages=int(m.stages), conv_per_stage=int(m.conv_per_stage),
                      kernel_size=int(m.kernel_size), heads=int(m.heads), dropout=0.1)
     model.net.set_normalization(stack.mean(0), stack.std(0))
+    if init_run:
+        model.load_state_dict(torch.load(Path(init_run) / "model.pt", map_location="cpu")["state"])
+        print(f"Fine-tuning {Path(init_run).name} at learning rate {lr:g}")
     model.to(device)
-    opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.05)
-    sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=1e-3, total_steps=epochs * ((len(data) + batch - 1) // batch))
+    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.05)
+    sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=epochs * ((len(data) + batch - 1) // batch))
     lookalikes = lookalike_lists(ref_ids) if lookalike_share > 0 else None
     sampler = LookalikeBatches(len(data), lookalikes, batch, lookalike_share, seed) if lookalikes else None
     loader = (DataLoader(data, batch_sampler=sampler, num_workers=4, persistent_workers=False) if sampler else
@@ -391,9 +396,39 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
             print(f"epoch {epoch:3d}  loss {total / max(len(loader), 1):.3f}  ({time.time() - t0:.0f} s)", flush=True)
     torch.save({"state": model.state_dict(), "labels": labels, "epochs": epochs, "frames": p.seq_len,
                 "variation": training_variation(cfg), "lookalike_share": lookalike_share if sampler else 0.0,
-                "context_share": context_share},
+                "context_share": context_share, "init_run": Path(init_run).name if init_run else None},
                out / "model.pt")
     return evaluate_run(cfg, out, attempts, seed)
+
+
+def run_score(run: Path) -> float:
+    """A run's single-sign accuracy: signs recognised first, averaged over the normal, harder and viewpoint tests."""
+    summary = json.loads((Path(run) / "signs.json").read_text())["summary"]
+    return float(np.mean([summary[t]["first"] for t in ("normal", "harder", "viewpoint")]))
+
+
+def lookalike_rounds(cfg: Config, start: str | Path, rounds: int = 3, share: float = 0.2, epochs: int = 10,
+                     lr: float = 3e-4) -> Path:
+    """Fine-tune in rounds on look-alikes: each round takes the best model so far, collects every pair any round
+    mistook for each other (so old confusions can't come back unnoticed) plus the model's close neighbours, and
+    fine-tunes with them sharing batches. Stops when a round doesn't beat the best; returns the best run."""
+    from .groups import build_groups
+
+    best = Path(start)
+    best_score, history = run_score(best), [best]
+    print(f"Round 0: {best.name}, {best_score:.2%} recognised first (normal, harder and viewpoint tests)", flush=True)
+    for k in range(1, rounds + 1):
+        build_groups(cfg, best, confusion_runs=history)
+        new = run_embed(cfg, epochs=epochs, lookalike_share=share, init_run=best, lr=lr)
+        score = run_score(new)
+        history.append(new)
+        better = score > best_score
+        print(f"Round {k}: {new.name}, {score:.2%} ({'better' if better else 'not better'} than {best_score:.2%})", flush=True)
+        if not better:
+            break
+        best, best_score = new, score
+    print(f"Best: {best.name} ({best_score:.2%})")
+    return best
 
 
 def evaluate_run(cfg: Config, run: Path | None = None, attempts: int = 4, seed: int = 7) -> Path:
