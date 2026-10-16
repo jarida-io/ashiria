@@ -25,6 +25,7 @@ HEADER = """\
 #   steps:  optional, the avatar coach's captions in the team's own words: the start, each movement, the end
 #           (laid over the coach's motion; without them, captions come from the motion and the dictionary's facts)
 #   review: set status to approved (with by/date) once the sign's Studio recording has been checked
+#   phrases: everyday phrases taught sign by sign; parts are sign ids in KSL order (content/phrases has the sources)
 #   sources.dictionary: the KSL Dictionary sign used as a draft until Studio takes replace it
 """
 
@@ -131,12 +132,25 @@ def validate(cat: dict) -> None:
             problems.append(f"{sid}: steps must be a list of sentences")
         if (s.get("review") or {}).get("status") not in REVIEW_STATUS:
             problems.append(f"{sid}: review.status must be one of {', '.join(REVIEW_STATUS)}")
+    for ph in cat.get("phrases") or []:
+        pid = ph.get("id", "?")
+        if pid in seen:
+            problems.append(f"{pid}: duplicate id")
+        seen.add(pid)
+        if ph.get("unit") not in units:
+            problems.append(f"{pid}: unknown unit {ph.get('unit')!r}")
+        unknown = [x for x in ph.get("parts") or [] if x not in {s["id"] for s in cat["signs"]}]
+        if not ph.get("parts") or unknown:
+            problems.append(f"{pid}: parts must be sign ids" + (f" (unknown: {', '.join(unknown)})" if unknown else ""))
+        if (ph.get("review") or {}).get("status") not in REVIEW_STATUS:
+            problems.append(f"{pid}: review.status must be one of {', '.join(REVIEW_STATUS)}")
     if problems:
         raise ValueError("catalogue problems:\n  " + "\n  ".join(problems))
 
 
 def set_review(cfg: Config, pack_id: str, ids: list[str], status: str, by: str | None = None) -> list[str]:
-    """Record a review decision (approved | rejected | draft) for signs in the catalogue; returns the ids changed.
+    """Record a review decision (approved | rejected | draft) for signs or phrases in the catalogue; returns the ids
+    changed.
     Only review fields change; every other edit in the file is kept (comments are rewritten to the header)."""
     import datetime
 
@@ -144,7 +158,7 @@ def set_review(cfg: Config, pack_id: str, ids: list[str], status: str, by: str |
         raise ValueError(f"status must be one of {', '.join(REVIEW_STATUS)}")
     file = catalogue_file(cfg, pack_id)
     cat = load_catalogue(file)
-    known = {s["id"]: s for s in cat["signs"]}
+    known = {s["id"]: s for s in cat["signs"] + (cat.get("phrases") or [])}
     unknown = [i for i in ids if i not in known]
     if unknown:
         raise ValueError(f"unknown sign ids: {', '.join(unknown)}")

@@ -128,22 +128,28 @@ export class LessonSystem extends createSystem({}) {
       return;
     }
     const sign = app.current;
-    const unit = app.pack.units.find((u) => u.id === sign?.unit);
-    const unitIds = app.signs.filter((s) => s.unit === sign?.unit).map((s) => s.id);
+    const item = app.item;
+    const phrase = app.phrase;
+    const unit = app.pack.units.find((u) => u.id === item?.unit);
+    const unitIds = app.items.filter((it) => it.unit === item?.unit).map((it) => it.id);
     const progress = app.progressView;
     const sum = unitSummary(progress, unitIds);
-    const where = unitIds.indexOf(sign?.id ?? '') + 1;
-    this.set('unit', sign ? `${unit?.title ?? ''}   ${where} of ${sum.total}   (${sum.learned} learned, ${sum.mastered} mastered)` : 'No signs');
+    const where = unitIds.indexOf(item?.id ?? '') + 1;
+    this.set('unit', item ? `${unit?.title ?? ''}   ${where} of ${sum.total}   (${sum.learned} learned, ${sum.mastered} mastered)` : 'No signs');
     if (app.mode === 'free') {
       this.set('gloss', 'Free Sign');
       this.set('mastery', `${app.learnedIds.length} signs to recognise`);
       this.set('mode', 'Sign any sign you have learned');
     } else {
-      this.set('gloss', sign?.gloss ?? '');
-      this.set('mastery', masteryText(progress.signs[sign?.id ?? '']?.level ?? 0));
+      this.set('gloss', phrase ? phrase.english : sign?.gloss ?? '');
+      this.set('mastery', masteryText(progress.signs[item?.id ?? '']?.level ?? 0));
       const gentle = sign?.tier === 'lenient' ? ' (gentle check)' : '';
-      const phase = sign?.tier === 'watch' ? 'Watch and copy (not scored)'
+      const doing = sign?.tier === 'watch' ? 'Watch and copy (not scored)'
         : app.phase === 'recall' ? 'From memory: the shadow is hidden' : `Copy the shadow hands${gentle}`;
+      // A phrase: its signs in KSL order, the one to sign now in capitals.
+      const phase = phrase
+        ? `${phrase.parts.map((id, k) => (k === app.part ? (this.gloss(id) ?? id).toUpperCase() : (this.gloss(id) ?? id).toLowerCase())).join('  ')}${phrase.question ? '  (question face)' : ''}.   Sign ${app.part + 1} of ${phrase.parts.length}: ${doing.toLowerCase()}`
+        : doing;
       this.set('mode', app.mode === 'studio' ? 'Studio: every attempt is saved as a take' : phase);
     }
     this.set('mode-label', app.mode === 'free' ? 'Practice' : 'Free Sign');
@@ -228,12 +234,15 @@ export class LessonSystem extends createSystem({}) {
     if (r.status === 'no_hands') { this.say('I lost sight of your hand', hintText(r.hints[0])); return; }
     const shadow = this.world.getSystem(ShadowHandsSystem) as ShadowHandsSystem | undefined;
     const wasRecall = app.phase === 'recall';
+    const phrase = app.phrase;
     const out = app.result(info.id, r.status === 'pass');
     if (r.status === 'pass') {
       if (shadow) shadow.highlightUntil = 0;
-      if (out.event === 'matched') this.say(`Yes! That is ${info.gloss}`, 'Now sign it from memory: the shadow hands are hidden.');
-      else if (out.event === 'mastered') this.say(`Mastered ${info.gloss}!`, 'Recalled on three different days. Tap Next for the next sign.');
-      else this.say(`Well done: ${info.gloss} from memory`, 'Come back tomorrow to master it. Tap Next for the next sign.');
+      const name = phrase ? `"${phrase.english}"` : info.gloss;
+      if (out.event === 'part') this.say(`Yes, ${info.gloss}`, `Now ${this.gloss(phrase!.parts[app.part]) ?? ''}.`);
+      else if (out.event === 'matched') this.say(`Yes! That is ${name}`, phrase ? 'Now the whole phrase from memory, sign by sign: the shadow hands are hidden.' : 'Now sign it from memory: the shadow hands are hidden.');
+      else if (out.event === 'mastered') this.say(`Mastered ${name}!`, 'Recalled on three different days. Tap Next to go on.');
+      else this.say(`Well done: ${name} from memory`, 'Come back tomorrow to master it. Tap Next to go on.');
       return;
     }
     const fingers = [0, 1, 2, 3, 4].map((f) => r.hints.some((h) => h.finger === ['thumb', 'index', 'middle', 'ring', 'pinky'][f]));

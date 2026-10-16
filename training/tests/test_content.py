@@ -117,6 +117,9 @@ def test_pack_is_deterministic(pack, tmp_path):
 
 def test_forbidden_fields_and_release_rules(pack, tmp_path):
     assert forbidden_keys({"signs": [{"takes": [{"clip_id": "x"}]}]}) == ["/signs[0]/takes[0]/clip_id"]
+    # A sign id is not a field: the sign NAME is fine, a name inside its entry is not.
+    assert forbidden_keys({"signs": {"name": {"takes": []}}}) == []
+    assert forbidden_keys({"signs": {"name": {"name": "Jerry"}}}) == ["/signs/name/name"]
     assert {"video", "description", "clip_id"} <= FORBIDDEN_KEYS
     _, catalogue, sources = pack
     ship, left_out, problems = release_selection(catalogue, sources, [], {})
@@ -152,6 +155,23 @@ def test_pack_carries_the_coach_hashed_and_checked(pack, tmp_path):
     with pytest.raises(SystemExit, match="forbidden"):
         write_pack(catalogue, sources, [], {}, P, AUG, tmp_path, attempts=4,
                    coach={sid: {**coach[sid], "description": "dictionary text"}})
+
+
+def test_phrases_ship_with_their_signs_and_need_approval_for_release(pack, tmp_path):
+    from ashiria_train.catalogue import validate
+
+    _, catalogue, sources = pack
+    a, b = catalogue["signs"][0]["id"], catalogue["signs"][1]["id"]
+    phrase = lambda pid, parts, status: {"id": pid, "english": pid, "unit": "basics", "order": 100, "parts": parts,
+                                         "question": False, "source": "patterned", "review": {"status": status}}
+    with_phrases = {**catalogue, "phrases": [phrase("p-ok", [a, b], "draft"), phrase("p-approved", [b, a], "approved")]}
+    validate(with_phrases)
+    with pytest.raises(ValueError, match="parts must be sign ids"):
+        validate({**catalogue, "phrases": [phrase("p-bad", [a, "no-such-sign"], "draft")]})
+    out = write_pack(with_phrases, sources, [], {}, P, AUG, tmp_path / "internal", attempts=4)
+    assert [ph["id"] for ph in json.loads((out / "catalogue.json").read_text())["phrases"]] == ["p-ok", "p-approved"]
+    out = write_pack(with_phrases, sources, [], {}, P, AUG, tmp_path / "release", release=True, attempts=4)
+    assert [ph["id"] for ph in json.loads((out / "catalogue.json").read_text())["phrases"]] == ["p-approved"]
 
 
 def test_dictionary_clip_choice_prefers_label_then_alias_then_lowest_variant():

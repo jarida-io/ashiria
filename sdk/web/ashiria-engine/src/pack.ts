@@ -18,6 +18,12 @@ export interface CatalogueSign {
 
 export interface Unit { id: string; title: string; order: number }
 
+/** An everyday phrase, taught sign by sign: `parts` are sign ids in KSL order. */
+export interface CataloguePhrase {
+  id: string; english: string; unit: string; order: number; parts: string[]; question: boolean;
+  source: 'attested' | 'patterned'; review: { status: string; by?: string | null; date?: string | null };
+}
+
 export interface CoachStep { kind: 'start' | 'move' | 'end'; from: number; to: number; key: number; text: string }
 /** The avatar coach's motion for one sign (spec/CONTENT_PACK.md, coach.json): body frame, frames × slots. */
 export interface CoachPose {
@@ -29,6 +35,8 @@ export interface CoachPose {
 export interface ContentPack {
   packId: string; version: string; distribution: 'internal' | 'release'; contentHash: string;
   params: EngineParams; units: Unit[]; catalogue: CatalogueSign[]; signs: Map<string, SignRef>;
+  /** Empty for packs built before phrases. */
+  phrases: CataloguePhrase[];
   selfcheck: { sign_id: string; take: number; descriptor_sum: number; tolerance: number };
   /** Empty for packs built before the coach was packed. */
   coach: Map<string, CoachPose>;
@@ -56,7 +64,7 @@ export async function parsePack(manifestText: string, catalogueText: string, ref
   }
   const coachSigns = m.files.coach && coachText !== null ? (JSON.parse(coachText).signs as Record<string, CoachPose>) : {};
   const params = paramsFromJson(m.engine);
-  const cat = JSON.parse(catalogueText) as { units: Unit[]; signs: CatalogueSign[] };
+  const cat = JSON.parse(catalogueText) as { units: Unit[]; signs: CatalogueSign[]; phrases?: CataloguePhrase[] };
   const refs = JSON.parse(referencesText) as { signs: Record<string, { takes: any[]; shadow_take: number; tau: number; tol: Tolerances }> };
   const byId = new Map(cat.signs.map((s) => [s.id, s]));
   const signs = new Map<string, SignRef>();
@@ -70,6 +78,7 @@ export async function parsePack(manifestText: string, catalogueText: string, ref
   return {
     packId: m.pack_id, version: m.version, distribution: m.distribution, contentHash: m.content_hash, params,
     units: cat.units, catalogue: cat.signs, signs, selfcheck: m.selfcheck, coach: new Map(Object.entries(coachSigns)),
+    phrases: (cat.phrases ?? []).filter((p) => p.parts.every((id) => signs.has(id))),
   };
 }
 

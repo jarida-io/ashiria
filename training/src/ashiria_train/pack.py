@@ -69,8 +69,9 @@ def take_segment(t: dict):
 def forbidden_keys(obj, where: str = "") -> list[str]:
     found = []
     if isinstance(obj, dict):
+        ids = where.endswith("/signs")  # keyed by sign id (a sign may be called "name"); its entries are checked
         for k, v in obj.items():
-            if k in FORBIDDEN_KEYS:
+            if k in FORBIDDEN_KEYS and not ids:
                 found.append(f"{where}/{k}")
             found += forbidden_keys(v, f"{where}/{k}")
     elif isinstance(obj, list):
@@ -189,6 +190,18 @@ def write_pack(catalogue: dict, sources: dict, missing: list[str], rights: dict,
         ref_json["signs"][sid] = {"takes": [take_json(t, signer) for t in ref.takes], "shadow_take": ref.shadow_take,
                                   "tau": round(ref.tau, 4), "tol": ref.tol.to_json()}
 
+    # Phrases come with their signs; a release also needs the phrase itself approved (most are built from patterns).
+    shipped, phrase_out = set(ids), []
+    cat_json["phrases"] = []
+    for ph in catalogue.get("phrases") or []:
+        status = (ph.get("review") or {}).get("status")
+        if not all(x in shipped for x in ph["parts"]) or (release and status != "approved"):
+            phrase_out.append(ph["id"])
+            continue
+        cat_json["phrases"].append({k: ph.get(k) for k in ("id", "english", "unit", "order", "parts", "question", "source")}
+                                   | {"review": ph.get("review") or {"status": "draft"}})
+    if phrase_out:
+        print(f"Phrases left out ({'unapproved or ' if release else ''}missing a sign): {', '.join(phrase_out)}")
     coach_json = {"signs": {sid: coach[sid] for sid in ids if sid in (coach or {})}}
     bad = forbidden_keys(cat_json) + forbidden_keys(ref_json) + forbidden_keys(coach_json)
     if bad:
@@ -231,7 +244,7 @@ def write_pack(catalogue: dict, sources: dict, missing: list[str], rights: dict,
     tiers = [s["tier"] for s in cat_json["signs"]]
     print(f"{pack_id} {catalogue['version']} ({manifest['distribution']}): {len(ids)} signs "
           f"({tiers.count('scored')} scored, {tiers.count('lenient')} lenient, {tiers.count('watch')} watch-only), "
-          f"avatar coach for {len(coach_json['signs'])}, {size:.1f} MB -> {out}")
+          f"{len(cat_json['phrases'])} phrases, avatar coach for {len(coach_json['signs'])}, {size:.1f} MB -> {out}")
     if not release:
         print("Internal pack, for development. For the hosted app, approve signs (`ashiria approve`) and build "
               "with --release.")

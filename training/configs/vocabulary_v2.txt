@@ -1,0 +1,90 @@
+# Ashiria Learn v2 vocabulary (16 Oct 2026): v1 plus the signs of the everyday phrases (content/phrases). One sign per line, in teaching order.
+# A word matches a dictionary sign's name or any of its aliases; "mother" also finds "mother 1".
+# References are derived, with the owners' permission, from the KSL Dictionary (content/rights.yaml).
+
+# Unit 1: spell your name (I and J are in the dictionary under "General": "I 1" and "J")
+a
+b
+c
+d
+e
+f
+g
+h
+i
+j
+k
+l
+m
+n
+o
+p
+q
+r
+s
+t
+u
+v
+w
+x
+y
+z
+
+# Unit 2: numbers
+zero
+one
+two
+three
+four
+five
+six
+seven
+eight
+nine
+ten
+
+# Unit 3: everyday signs (one-handed or clearly trackable)
+hello
+thank you
+sorry
+fine
+again
+deaf
+eat
+water
+mother
+father
+baby
+happy
+
+# Unit 4: meeting people (the signs of the greeting and introduction phrases)
+good
+morning
+you
+how
+me
+name
+your
+what
+mine
+live
+where
+sign
+learn
+now
+
+# Unit 5: asking again
+please
+slow
+understand
+not
+know
+
+# Unit 6: needs
+hungry
+want
+sick
+doctor
+call
+toilet
+tired

@@ -2,10 +2,15 @@
  * Shared app state: the loaded content pack, the current mode and sign, and the user's settings and progress.
  * Settings and progress live only on this device (localStorage); hand data is never stored or sent anywhere.
  */
-import { defaultParams, type ContentPack, type EngineParams } from '@ashiria/engine';
-import { applyResult, dayOf, emptyProgress, learned, seen, simulatedWeek, type Outcome, type Phase, type Progress } from './flow.js';
+import { defaultParams, type CataloguePhrase, type CatalogueSign, type ContentPack, type EngineParams } from '@ashiria/engine';
+import { applyPhraseResult, applyResult, dayOf, emptyProgress, learned, seen, simulatedWeek, type Outcome, type Phase, type Progress } from './flow.js';
 
 export type Mode = 'practice' | 'free' | 'studio';
+
+/** What the lesson steps through: signs, and phrases taught sign by sign. */
+export type Item =
+  | { kind: 'sign'; id: string; unit: string; order: number; sign: CatalogueSign }
+  | { kind: 'phrase'; id: string; unit: string; order: number; phrase: CataloguePhrase };
 
 export interface Settings {
   leftHanded: boolean;
@@ -50,7 +55,9 @@ class AppState {
   pack: ContentPack | null = null;
   packError = '';
   mode: Mode = STUDIO_ENABLED ? 'studio' : 'practice';
-  signIndex = 0;
+  itemIndex = 0;
+  /** In a phrase: which of its signs is being signed. */
+  part = 0;
   settings: Settings = load(SETTINGS_KEY, { leftHanded: false, strictness: 1, restHeight: -1.5, shoulderWidth: 0.38 });
   progress: Progress = load(PROGRESS_KEY, emptyProgress());
   /** Practice phase for the current sign, and misses in that phase. */
@@ -68,7 +75,31 @@ class AppState {
     return [...p.catalogue].sort((a, b) => (unitOrder.get(a.unit) ?? 0) - (unitOrder.get(b.unit) ?? 0) || a.order - b.order);
   }
 
-  get current() { return this.signs[this.signIndex] ?? null; }
+  /** Signs and phrases in teaching order: each unit's signs, then its phrases. */
+  get items(): Item[] {
+    const p = this.pack;
+    if (!p) return [];
+    const unitOrder = new Map(p.units.map((u) => [u.id, u.order]));
+    const items: Item[] = [
+      ...p.catalogue.map((sign) => ({ kind: 'sign' as const, id: sign.id, unit: sign.unit, order: sign.order, sign })),
+      ...p.phrases.map((phrase) => ({ kind: 'phrase' as const, id: phrase.id, unit: phrase.unit, order: phrase.order, phrase })),
+    ];
+    return items.sort((a, b) => (unitOrder.get(a.unit) ?? 0) - (unitOrder.get(b.unit) ?? 0) || a.order - b.order);
+  }
+
+  get item(): Item | null { return this.items[this.itemIndex] ?? null; }
+
+  /** The phrase being practised, or null for a single sign. */
+  get phrase(): CataloguePhrase | null { const it = this.item; return it?.kind === 'phrase' ? it.phrase : null; }
+
+  /** The sign to sign now: the item itself, or in a phrase the part being signed. */
+  get current(): CatalogueSign | null {
+    const it = this.item;
+    if (!it) return null;
+    if (it.kind === 'sign') return it.sign;
+    const id = it.phrase.parts[Math.min(this.part, it.phrase.parts.length - 1)];
+    return this.pack?.catalogue.find((s) => s.id === id) ?? null;
+  }
 
   get today(): string { return dayOf(new Date()); }
 
@@ -95,9 +126,18 @@ class AppState {
 
   updateSettings(patch: Partial<Settings>): void { this.settings = { ...this.settings, ...patch }; save(SETTINGS_KEY, this.settings); this.changed(); }
 
-  /** Apply a Verify result to the current sign: updates progress, phase and misses, and saves. */
+  /** Apply a Verify result to the current sign (in a phrase, to its current part): updates progress, phase, misses
+   * and part, and saves. */
   result(signId: string, passed: boolean): Outcome {
-    const out = applyResult(this.progress, signId, this.phase, passed, this.misses, this.today);
+    const phrase = this.phrase;
+    let out: Outcome;
+    if (phrase) {
+      const r = applyPhraseResult(this.progress, phrase.id, this.phase, this.part, phrase.parts.length, passed, this.misses, this.today);
+      out = r.out;
+      this.part = out.event === 'back_to_match' ? 0 : r.part;
+    } else {
+      out = applyResult(this.progress, signId, this.phase, passed, this.misses, this.today);
+    }
     this.misses = out.phase !== this.phase || passed ? 0 : this.misses + 1;
     this.phase = out.phase;
     save(PROGRESS_KEY, this.progress);
@@ -114,19 +154,21 @@ class AppState {
     this.goTo(0);
   }
 
-  /** Show sign i: back to the match phase, and mark it seen. */
+  /** Show item i (a sign or a phrase, from its first sign): back to the match phase, and mark it seen. */
   goTo(i: number): void {
-    const n = this.signs.length;
+    const items = this.items;
+    const n = items.length;
     if (!n) { this.changed(); return; }
-    this.signIndex = ((i % n) + n) % n;
+    this.itemIndex = ((i % n) + n) % n;
+    this.part = 0;
     this.phase = 'match';
     this.misses = 0;
-    seen(this.progress, this.signs[this.signIndex].id);
+    seen(this.progress, items[this.itemIndex].id);
     save(PROGRESS_KEY, this.progress);
     this.changed();
   }
 
-  step(by: number): void { this.goTo(this.signIndex + by); }
+  step(by: number): void { this.goTo(this.itemIndex + by); }
 }
 
 export const app = new AppState();

@@ -62,8 +62,17 @@ What the headset loads to teach and check signs. `ashiria pack` builds one from 
    "tags": {"hands": "one", "movement": "static", "near_face": false, "hands_close": false},
    "lookalikes": ["letter-s", "letter-e", "letter-t"],
    "source": {"kind": "ksl_dictionary", "takes": 1, "signers": ["ksl-dictionary"]},
+   "review": {"status": "draft", "by": null, "date": null}}],
+ "phrases": [{
+   "id": "phrase-your-name", "english": "What is your name?", "unit": "meeting-people", "order": 104,
+   "parts": ["name", "your", "what"], "question": true, "source": "patterned",
    "review": {"status": "draft", "by": null, "date": null}}]}
 ```
+
+**`phrases`** (optional: older packs have none) are everyday phrases taught sign by sign. `parts` are sign ids in
+KSL order, all in the same pack. `source` is `attested` (the gloss appears in Kenyan teaching material) or
+`patterned` (built from attested patterns); a release pack ships a phrase only once it is approved.
+`question` marks a phrase signed with a question face, which the hands alone don't show.
 
 ### references.json
 

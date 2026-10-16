@@ -4,6 +4,7 @@
 #   steps:  optional, the avatar coach's captions in the team's own words: the start, each movement, the end
 #           (laid over the coach's motion; without them, captions come from the motion and the dictionary's facts)
 #   review: set status to approved (with by/date) once the sign's Studio recording has been checked
+#   phrases: everyday phrases taught sign by sign; parts are sign ids in KSL order (content/phrases has the sources)
 #   sources.dictionary: the KSL Dictionary sign used as a draft until Studio takes replace it
 pack_id: ksl-core
 version: 0.2.0
@@ -17,6 +18,15 @@ units:
 - id: everyday-signs
   title: Everyday signs
   order: 3
+- id: meeting-people
+  title: Meeting people
+  order: 4
+- id: asking-again
+  title: Asking again
+  order: 5
+- id: needs
+  title: Needs
+  order: 6
 signs:
 - id: letter-a
   gloss: A
@@ -995,3 +1005,768 @@ signs:
     status: approved
     by: Jerry
     date: '2026-10-16'
+- id: good
+  gloss: good
+  aliases: []
+  unit: meeting-people
+  order: 1
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold both hands flat, fingers together, palms down, your right hand above your left.
+  - Pat the back of your left hand with your right palm.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: good
+  review:
+    status: draft
+    by: null
+    date: null
+- id: morning
+  gloss: morning
+  aliases: []
+  unit: meeting-people
+  order: 2
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold your right hand flat, fingers together, palm down, out to your right.
+  - Move it forward a little, two or three times.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: morning
+  review:
+    status: draft
+    by: null
+    date: null
+- id: you
+  gloss: you
+  aliases: []
+  unit: meeting-people
+  order: 3
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Point your right index finger forward, palm down.
+  - Point it at the person you mean.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: you
+  review:
+    status: draft
+    by: null
+    date: null
+- id: how
+  gloss: how
+  aliases: []
+  unit: meeting-people
+  order: 4
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold both hands open, fingers spread, palms down, in front of you.
+  - Turn both hands over at the wrists so your palms face up.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: how
+  review:
+    status: draft
+    by: null
+    date: null
+- id: me
+  gloss: me
+  aliases: []
+  unit: meeting-people
+  order: 5
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Make your right index finger point, palm facing left.
+  - Point it at the middle of your chest.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: me
+  review:
+    status: draft
+    by: null
+    date: null
+- id: name
+  gloss: name
+  aliases: []
+  unit: meeting-people
+  order: 6
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold your left hand flat and upright, palm facing right. Make a G with your right hand (index finger and thumb out).
+  - Touch your right thumb and index finger to your left palm.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: name
+  review:
+    status: draft
+    by: null
+    date: null
+- id: your
+  gloss: your
+  aliases: []
+  unit: meeting-people
+  order: 7
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold your right hand flat, fingers together, palm down, in front of you.
+  - Tip it up from the wrist as your arm moves slightly forward.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: your
+  review:
+    status: draft
+    by: null
+    date: null
+- id: what
+  gloss: what
+  aliases: []
+  unit: meeting-people
+  order: 8
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold both hands open, fingers spread, palms down, in front of you.
+  - Flip both hands over so your palms face up.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: what
+  review:
+    status: draft
+    by: null
+    date: null
+- id: mine
+  gloss: mine
+  aliases: []
+  unit: meeting-people
+  order: 9
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold your right hand flat, fingers together, palm facing you.
+  - Touch it to your chest.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: mine
+  review:
+    status: draft
+    by: null
+    date: null
+- id: live
+  gloss: live
+  aliases: []
+  unit: meeting-people
+  order: 10
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Make an A with both hands (fists, thumbs against the side), palms facing you, pointing down at your waist.
+  - Move both hands straight up your body together, opening them as they rise.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: live
+  review:
+    status: draft
+    by: null
+    date: null
+- id: where
+  gloss: where
+  aliases: []
+  unit: meeting-people
+  order: 11
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold both hands open, fingers spread, palms up, out at your sides.
+  - Move them slightly from side to side.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: where
+  review:
+    status: draft
+    by: null
+    date: null
+- id: sign
+  gloss: sign
+  aliases: []
+  unit: meeting-people
+  order: 12
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold both hands open, palms facing you, right hand pointing left and left hand pointing right.
+  - Circle them back and forth in opposite directions, like turning wheels.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: sign
+  review:
+    status: draft
+    by: null
+    date: null
+- id: learn
+  gloss: learn
+  aliases: []
+  unit: meeting-people
+  order: 13
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Bring your fingertips together onto your thumb (a flat O), palm facing you, beside your forehead.
+  - Tap the side of your forehead with your fingertips.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: learn
+  review:
+    status: draft
+    by: null
+    date: null
+- id: now
+  gloss: now
+  aliases: []
+  unit: meeting-people
+  order: 14
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold both hands flat, fingers together, palms facing away, pointing down in front of you.
+  - Move both hands down together, twice.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: now
+  review:
+    status: draft
+    by: null
+    date: null
+- id: please
+  gloss: please
+  aliases: []
+  unit: asking-again
+  order: 1
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold your right hand flat, fingers together, palm facing you, on your chest over your heart.
+  - Rub it round in a circle on your chest.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: please
+  review:
+    status: draft
+    by: null
+    date: null
+- id: slow
+  gloss: slow
+  aliases: []
+  unit: asking-again
+  order: 2
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold both hands flat, fingers together, palms facing away, in front of you.
+  - Circle them back towards you together, a few times, so your palms turn down.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: slow
+  review:
+    status: draft
+    by: null
+    date: null
+- id: understand
+  gloss: understand
+  aliases: []
+  unit: asking-again
+  order: 3
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Make a fist with your right hand, palm facing back, beside your forehead.
+  - Flick your index finger up and out.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: understand
+  review:
+    status: draft
+    by: null
+    date: null
+- id: not
+  gloss: not
+  aliases: []
+  unit: asking-again
+  order: 4
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Make an O with both hands, palms facing away, close together near your mouth.
+  - Move them apart to the sides, opening your hands as they go.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: not
+  review:
+    status: draft
+    by: null
+    date: null
+- id: know
+  gloss: know
+  aliases: []
+  unit: asking-again
+  order: 5
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Bend your right hand at the knuckles, fingers together, palm down, near your forehead.
+  - Pat your forehead with your fingertips, twice.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: know
+  review:
+    status: draft
+    by: null
+    date: null
+- id: hungry
+  gloss: hungry
+  aliases: []
+  unit: needs
+  order: 1
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Bend both hands at the knuckles, fingers together, palms up, fingertips pointing at your stomach.
+  - Move them in towards your stomach a little.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: hungry
+  review:
+    status: draft
+    by: null
+    date: null
+- id: want
+  gloss: want
+  aliases: []
+  unit: needs
+  order: 2
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold your right hand open, fingers spread, palm facing you, at your throat.
+  - Draw your fingers down your throat, two or three times.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: want
+  review:
+    status: draft
+    by: null
+    date: null
+- id: sick
+  gloss: sick
+  aliases: []
+  unit: needs
+  order: 3
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Bend your right hand at the knuckles, fingers together.
+  - Touch the back of your fingers to your cheek.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: sick
+  review:
+    status: draft
+    by: null
+    date: null
+- id: doctor
+  gloss: doctor
+  aliases: []
+  unit: needs
+  order: 4
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Make an X with your right hand (index finger hooked), palm facing you.
+  - Tap the side of your left arm with it. Then hold both hands flat, palms facing each other, and move them down together
+    (person).
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: doctor
+  review:
+    status: draft
+    by: null
+    date: null
+- id: call
+  gloss: call
+  aliases: []
+  unit: needs
+  order: 5
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold your right hand flat, fingers together, palm facing away, out to your right.
+  - Draw it towards you, closing it into an A (a fist, thumb against the side) as it comes.
+  - Hold it still for a moment, then lower your hand.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: call
+  review:
+    status: draft
+    by: null
+    date: null
+- id: toilet
+  gloss: toilet
+  aliases: []
+  unit: needs
+  order: 6
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Hold both hands flat, fingers together, palms facing each other.
+  - Bring your fingertips together into a point, like a roof, two or three times.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: toilet
+  review:
+    status: draft
+    by: null
+    date: null
+- id: tired
+  gloss: tired
+  aliases: []
+  unit: needs
+  order: 7
+  tier: auto
+  tier_note: ''
+  hint: ''
+  steps:
+  - Curve both hands into claws, palms facing you, resting on your chest.
+  - Turn them down and out so your palms face up, as if your body droops.
+  - Hold it for a moment, then lower your hands.
+  facial_grammar: false
+  recognise: null
+  sources:
+    dictionary: tired
+  review:
+    status: draft
+    by: null
+    date: null
+phrases:
+- id: phrase-good-morning
+  english: Good morning
+  unit: meeting-people
+  order: 101
+  parts:
+  - good
+  - morning
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-how-are-you
+  english: How are you?
+  unit: meeting-people
+  order: 102
+  parts:
+  - you
+  - how
+  question: true
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-im-fine
+  english: I'm fine
+  unit: meeting-people
+  order: 103
+  parts:
+  - me
+  - fine
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-your-name
+  english: What is your name?
+  unit: meeting-people
+  order: 104
+  parts:
+  - name
+  - your
+  - what
+  question: true
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-my-name-is
+  english: My name is ... (then spell it)
+  unit: meeting-people
+  order: 105
+  parts:
+  - name
+  - mine
+  question: false
+  source: attested
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-where-live
+  english: Where do you live?
+  unit: meeting-people
+  order: 106
+  parts:
+  - you
+  - live
+  - where
+  question: true
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-im-deaf
+  english: I'm deaf
+  unit: meeting-people
+  order: 107
+  parts:
+  - me
+  - deaf
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-learning
+  english: I'm learning to sign
+  unit: meeting-people
+  order: 108
+  parts:
+  - me
+  - sign
+  - learn
+  - now
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-again-please
+  english: Again, please
+  unit: asking-again
+  order: 101
+  parts:
+  - again
+  - please
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-slowly-please
+  english: Sign slowly, please
+  unit: asking-again
+  order: 102
+  parts:
+  - sign
+  - slow
+  - please
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-dont-understand
+  english: I don't understand
+  unit: asking-again
+  order: 103
+  parts:
+  - me
+  - understand
+  - not
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-dont-know
+  english: I don't know
+  unit: asking-again
+  order: 104
+  parts:
+  - me
+  - know
+  - not
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-im-hungry
+  english: I'm hungry
+  unit: needs
+  order: 101
+  parts:
+  - me
+  - hungry
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-want-water
+  english: I want water
+  unit: needs
+  order: 102
+  parts:
+  - water
+  - me
+  - want
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-im-sick
+  english: I'm sick
+  unit: needs
+  order: 103
+  parts:
+  - me
+  - sick
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-call-doctor
+  english: Please call a doctor
+  unit: needs
+  order: 104
+  parts:
+  - doctor
+  - call
+  - please
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-toilet-where
+  english: Where is the toilet?
+  unit: needs
+  order: 105
+  parts:
+  - toilet
+  - where
+  question: true
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null
+- id: phrase-im-tired
+  english: I'm tired
+  unit: needs
+  order: 106
+  parts:
+  - me
+  - tired
+  question: false
+  source: patterned
+  review:
+    status: draft
+    by: null
+    date: null

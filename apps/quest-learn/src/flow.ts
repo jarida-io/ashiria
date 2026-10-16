@@ -3,7 +3,8 @@
  * (`node --test src/flow.test.ts`).
  *
  * Per sign: match (copy the shadow hands) → recall (from memory, shadow hidden). Two misses in recall bring the
- * shadow back. Mastery: seen → matched → recalled → mastered (recalled on 3 different days).
+ * shadow back. Mastery: seen → matched → recalled → mastered (recalled on 3 different days). A phrase goes the same
+ * way, signed part by part: each sign it is made of in turn, the phrase's result coming with its last sign.
  */
 
 export type Phase = 'match' | 'recall';
@@ -48,7 +49,7 @@ export function currentStreak(p: Progress, today: string): number {
   return last === today || last === previousDay(today) ? p.streak.count : 0;
 }
 
-export interface Outcome { phase: Phase; event: 'matched' | 'recalled' | 'mastered' | 'miss' | 'back_to_match' }
+export interface Outcome { phase: Phase; event: 'matched' | 'recalled' | 'mastered' | 'miss' | 'back_to_match' | 'part' }
 
 /**
  * Apply a Verify result for sign `id` in `phase`. `misses` counts misses in the current phase (the caller keeps
@@ -74,6 +75,18 @@ export function applyResult(p: Progress, id: string, phase: Phase, passed: boole
   }
   if (s.level < 3) s.level = 3;
   return { phase: 'recall', event: 'recalled' };
+}
+
+/**
+ * A Verify result for part `part` of phrase `id` (made of `parts` signs). A passed sign that isn't the last moves
+ * on to the next part without touching progress; the last one, or any miss, counts for the phrase (applyResult).
+ * Returns the outcome and the part to sign next.
+ */
+export function applyPhraseResult(p: Progress, id: string, phase: Phase, part: number, parts: number, passed: boolean,
+  misses: number, today: string): { out: Outcome; part: number } {
+  if (passed && part + 1 < parts) return { out: { phase, event: 'part' }, part: part + 1 };
+  const out = applyResult(p, id, phase, passed, misses, today);
+  return { out, part: passed ? 0 : part };
 }
 
 /** Signs the user can sign without the shadow (matched or better): Free Sign searches these. */

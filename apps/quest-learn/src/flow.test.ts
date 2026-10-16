@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  applyResult, currentStreak, dayOf, emptyProgress, learned, masteryText, seen, simulatedWeek, touchStreak, unitSummary,
+  applyPhraseResult, applyResult, currentStreak, dayOf, emptyProgress, learned, masteryText, seen, simulatedWeek, touchStreak, unitSummary,
 } from './flow.ts';
 
 test('match then recall, two recall misses go back to match', () => {
@@ -47,4 +47,19 @@ test('learned signs, summaries, mastery text and the simulated week', () => {
   assert.equal(masteryText(2), 'Matched (2 of 4)');
   assert.equal(masteryText(0), 'New (0 of 4)');
   assert.equal(dayOf(new Date(2026, 0, 5)), '2026-01-05');
+});
+
+test('a phrase is signed part by part; its last part, or a miss, counts for the phrase', () => {
+  const p = emptyProgress();
+  const day = '2026-10-16';
+  let r = applyPhraseResult(p, 'phrase-x', 'match', 0, 3, true, 0, day);
+  assert.deepEqual(r, { out: { phase: 'match', event: 'part' }, part: 1 });
+  assert.ok(!('phrase-x' in p.signs)); // a part alone is not progress on the phrase
+  r = applyPhraseResult(p, 'phrase-x', 'match', 1, 3, false, 0, day);
+  assert.deepEqual(r, { out: { phase: 'match', event: 'miss' }, part: 1 }); // stay on the sign that was missed
+  r = applyPhraseResult(p, 'phrase-x', 'match', 1, 3, true, 1, day);
+  assert.equal(r.part, 2);
+  r = applyPhraseResult(p, 'phrase-x', 'match', 2, 3, true, 0, day);
+  assert.deepEqual(r, { out: { phase: 'recall', event: 'matched' }, part: 0 });
+  assert.equal(p.signs['phrase-x'].level, 2);
 });
