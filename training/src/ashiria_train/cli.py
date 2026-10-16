@@ -79,9 +79,16 @@ def main(argv: list[str] | None = None) -> None:
     p = steps.add_parser("embed-signs", help="per-sign results of an embed run, for the sign browser")
     p.add_argument("--run", help="run folder (default: the newest embed run)")
     p.add_argument("--attempts", type=int, default=3)
+    p = steps.add_parser("embed-views", help="recogniser accuracy from a grid of camera positions and a mirrored camera")
+    p.add_argument("--run", help="run folder (default: the newest embed run)")
+    p.add_argument("--attempts", type=int, default=1)
+    p = steps.add_parser("sign-groups", help="every sign by kind and into look-alike groups, with what tells them apart")
+    p.add_argument("--run", help="run folder (default: the newest embed run)")
     p = steps.add_parser("embed", help="experiment: sign embedding over all dictionary signs, compared with DTW")
     p.add_argument("--epochs", type=int, default=60)
     p.add_argument("--attempts", type=int, default=4)
+    p.add_argument("--lookalike-share", type=float, default=0.5,
+                   help="share of each batch given to look-alike neighbourhoods (needs `ashiria sign-groups`; 0 = random)")
     p = steps.add_parser("steps-check", help="how often the avatar's step captions agree with the dictionary descriptions")
     p.add_argument("--limit", type=int)
     p.add_argument("--rules", action="store_true", help="the hand-written rules only, without the fitted model")
@@ -190,9 +197,15 @@ def main(argv: list[str] | None = None) -> None:
     elif args.step == "embed-signs":
         from .embed import sign_results
         sign_results(cfg, args.run, args.attempts)
+    elif args.step == "embed-views":
+        from .embed import perspective_results
+        perspective_results(cfg, args.run, args.attempts)
+    elif args.step == "sign-groups":
+        from .groups import build_groups
+        build_groups(cfg, args.run)
     elif args.step == "embed":
         from .embed import run_embed
-        run_embed(cfg, epochs=args.epochs, attempts=args.attempts)
+        run_embed(cfg, epochs=args.epochs, attempts=args.attempts, lookalike_share=args.lookalike_share)
     elif args.step == "catalogue":
         from .catalogue import update_catalogue
         update_catalogue(cfg, args.vocab, args.pack)

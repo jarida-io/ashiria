@@ -74,10 +74,12 @@ def camera_view(hand_rel: np.ndarray, wrist_pos: np.ndarray, yaw_deg: float, pit
 
 def random_camera_view(hand_rel, wrist_pos, rng: np.random.Generator, a) -> tuple[np.ndarray, np.ndarray]:
     """A random viewpoint for augmentation (keys view_yaw_deg, view_pitch_deg, view_depth [lo, hi],
-    view_depth_noise_m, view_tilt_deg, view_wrist_depth)."""
+    view_depth_noise_m, view_tilt_deg, view_wrist_depth); view_yaw_at / view_pitch_at fix the angles (for testing
+    one camera position)."""
     lo, hi = a["view_depth"]
     w = a.get("view_wrist_depth", 0.15)
-    yaw, pitch = rng.uniform(-a["view_yaw_deg"], a["view_yaw_deg"]), rng.uniform(-a["view_pitch_deg"], a["view_pitch_deg"])
+    yaw = a["view_yaw_at"] if "view_yaw_at" in a else rng.uniform(-a["view_yaw_deg"], a["view_yaw_deg"])
+    pitch = a["view_pitch_at"] if "view_pitch_at" in a else rng.uniform(-a["view_pitch_deg"], a["view_pitch_deg"])
     look = rotation(yaw, pitch, 0.0) @ np.array([0.0, 0.0, -1.0])
     axis = np.cross(look, rng.normal(size=3))  # any direction across the line of sight
     return camera_view(hand_rel, wrist_pos, yaw, pitch, rng.uniform(lo, hi), 1.0 + rng.uniform(-w, w),

@@ -22,7 +22,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, Sampler
 
 from .augment import augment
 from .calibrate import VIDEO_REST_HEIGHT, simulated_stream
@@ -152,6 +152,51 @@ class Views(Dataset):
         return torch.from_numpy(self.view(self.refs[i], rng)), torch.from_numpy(self.view(self.refs[i], rng))
 
 
+class LookalikeBatches(Sampler):
+    """Batches where `share` of the signs come as look-alike neighbourhoods (a sign and the signs a previous run
+    found close to it or mistook it for: groups.py), the rest at random. Contrastive training only learns what
+    tells signs apart within a batch, so look-alikes need to meet there. No sign appears twice in a batch."""
+
+    def __init__(self, n: int, lookalikes: list[list[int]], batch: int, share: float, seed: int):
+        self.n, self.lookalikes, self.batch, self.share, self.seed = n, lookalikes, batch, share, seed
+        self.epoch = 0
+
+    def __len__(self) -> int:
+        return self.n // self.batch
+
+    def __iter__(self):
+        rng = np.random.default_rng((self.seed, self.epoch))
+        order = rng.permutation(self.n)
+        seeds = [i for i in rng.permutation(self.n) if self.lookalikes[i]]
+        pos, s = 0, 0
+        for _ in range(len(self)):
+            chosen, taken = [], set()
+            while len(chosen) < self.share * self.batch and s < len(seeds):
+                for j in [seeds[s], *self.lookalikes[seeds[s]]]:
+                    if j not in taken and len(chosen) < self.batch:
+                        chosen.append(j)
+                        taken.add(j)
+                s += 1
+            while len(chosen) < self.batch:
+                j = int(order[pos % self.n])
+                pos += 1
+                if j not in taken:
+                    chosen.append(j)
+                    taken.add(j)
+            yield chosen
+
+
+def lookalike_lists(ids: list[str]) -> list[list[int]] | None:
+    """Each reference's look-alikes as indices, from the last `ashiria sign-groups` (None if there is none yet)."""
+    from .groups import load_groups
+
+    g = load_groups()
+    if not g:
+        return None
+    index = {c: i for i, c in enumerate(ids)}
+    return [[index[l["clip"]] for l in g["signs"].get(c, {}).get("lookalikes", []) if l["clip"] in index] for c in ids]
+
+
 def training_variation(cfg: Config) -> list[dict]:
     """What the recogniser trains on: half mild variation (the calibration's "someone else", which the normal test
     uses) and half stronger. The stronger half stops short of the harder test (15 degree turns, 0.006 m jitter,
@@ -240,11 +285,11 @@ def evaluate(model, labels, refs, ref_feats, device, p: EngineParams, aug: dict,
 
 
 def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: float = 0.1, seed: int = 7,
-              attempts: int = 4) -> Path:
+              attempts: int = 4, lookalike_share: float = 0.5) -> Path:
     torch.manual_seed(seed)
     p = recogniser_params(EngineParams.from_config(cfg))
     t0 = time.time()
-    labels, refs, _ = load_references(p)
+    labels, refs, ref_ids = load_references(p)
     print(f"{len(refs)} dictionary references ({time.time() - t0:.0f} s)")
     data = Views(refs, training_variation(cfg), p.seq_len, seed)
     ref_feats = [sequence_features(r.hand_rel, r.wrist_pos, r.present, 1.0 / r.fps) for r in refs]
@@ -257,7 +302,13 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
     model.to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.05)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=1e-3, total_steps=epochs * ((len(data) + batch - 1) // batch))
-    loader = DataLoader(data, batch_size=batch, shuffle=True, drop_last=True, num_workers=4, persistent_workers=False)
+    lookalikes = lookalike_lists(ref_ids) if lookalike_share > 0 else None
+    sampler = LookalikeBatches(len(data), lookalikes, batch, lookalike_share, seed) if lookalikes else None
+    loader = (DataLoader(data, batch_sampler=sampler, num_workers=4, persistent_workers=False) if sampler else
+              DataLoader(data, batch_size=batch, shuffle=True, drop_last=True, num_workers=4, persistent_workers=False))
+    if sampler:
+        print(f"Look-alikes share batches: {lookalike_share:.0%} of each batch, "
+              f"{sum(bool(x) for x in lookalikes)} signs with look-alikes (groups.py)")
 
     vocab = [line.split("#")[0].strip() for line in open(training_relative("configs/vocabulary_v1.txt")) if line.split("#")[0].strip()]
     index = {lab: k for k, lab in enumerate(labels)}
@@ -271,6 +322,8 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
     for epoch in range(epochs):
         model.train()
         data.epoch = epoch
+        if sampler:
+            sampler.epoch = epoch
         total = 0.0
         for a, b in loader:
             loss = nt_xent(model(a.to(device)), model(b.to(device)), temperature)
@@ -282,7 +335,8 @@ def run_embed(cfg: Config, epochs: int = 60, batch: int = 256, temperature: floa
         if epoch % 10 == 0 or epoch == epochs - 1:
             print(f"epoch {epoch:3d}  loss {total / max(len(loader), 1):.3f}  ({time.time() - t0:.0f} s)", flush=True)
     torch.save({"state": model.state_dict(), "labels": labels, "epochs": epochs, "frames": p.seq_len,
-                "variation": training_variation(cfg)}, out / "model.pt")
+                "variation": training_variation(cfg), "lookalike_share": lookalike_share if sampler else 0.0},
+               out / "model.pt")
     return evaluate_run(cfg, out, attempts, seed)
 
 
@@ -344,6 +398,71 @@ def _load_model(cfg: Config, run: Path, in_dim: int, device) -> Embedder:
     return model.to(device).eval()
 
 
+PERSPECTIVE_YAW = (-60, -40, -20, 0, 20, 40, 60)  # camera to the signer's right (+) or left (-), degrees
+PERSPECTIVE_PITCH = (-30, 0, 30)                  # camera below (-) or above (+)
+
+
+def perspective_results(cfg: Config, run: Path | None = None, attempts: int = 1, seed: int = 5) -> Path:
+    """How the recogniser holds up from fixed camera positions around the signer, wider than training saw (35 and
+    25 degrees at most), and with a mirrored camera: every dictionary sign, `attempts` simulated attempts per
+    position, recognised first among all signs. "Both ways" scores each attempt as it is and mirrored and keeps the
+    better match, so a mirrored camera or a left-handed signer needs no setting. Simulated camera errors (depth and
+    tilt along the line of sight), not hands hiding each other. Writes `perspectives.json` into the run folder."""
+    from .canonical import mirror
+
+    run = Path(run) if run else latest_run(cfg)
+    if run is None:
+        raise SystemExit("No embed run with a model yet: run `ashiria embed` first.")
+    t0 = time.time()
+    p = recogniser_params(EngineParams.from_config(cfg))
+    labels, refs, ids = load_references(p)
+    p_dtw = whole_sign(EngineParams.from_config(cfg))
+    feats_of = lambda s: sequence_features(s.hand_rel, s.wrist_pos, s.present, 1.0 / s.fps)
+    device = pick_device(str(cfg.train.device))
+    model = _load_model(cfg, run, feats_of(refs[0]).shape[-1], device)
+    ref_emb = embed_all(model, [feats_of(r) for r in refs], device)
+    p_sim = dataclasses.replace(p, segmenter=dataclasses.replace(p.segmenter, rest_height=VIDEO_REST_HEIGHT))
+    base = {**dict(cfg.calibrate.augment), **VIEW_TEST}
+
+    def attempts_at(aug: dict, k: int) -> tuple[np.ndarray, list[Segment]]:
+        rng = np.random.default_rng((seed, k))
+        owner, segs = [], []
+        for i, r in enumerate(refs):
+            for _ in range(attempts):
+                a, _ = _simulate(r, rng, aug, p_sim, p_dtw)
+                if a is not None:
+                    owner.append(i)
+                    segs.append(a)
+        return np.array(owner), segs
+
+    def first(owner: np.ndarray, segs: list[Segment], both: bool = False) -> float:
+        sim = embed_all(model, [feats_of(s) for s in segs], device) @ ref_emb.T
+        if both:
+            sim = np.maximum(sim, embed_all(model, [feats_of(mirror(s)) for s in segs], device) @ ref_emb.T)
+        return float((sim.argmax(1) == owner).mean())
+
+    grid, k = {}, 0
+    for pitch in PERSPECTIVE_PITCH:
+        for yaw in PERSPECTIVE_YAW:
+            owner, segs = attempts_at({**base, "view_yaw_at": yaw, "view_pitch_at": pitch}, k)
+            grid[f"{yaw},{pitch}"] = {"yaw": yaw, "pitch": pitch, "tests": len(owner), "first": first(owner, segs)}
+            print(f"yaw {yaw:+3d} pitch {pitch:+3d}: {grid[f'{yaw},{pitch}']['first']:.1%} of {len(owner)} "
+                  f"({time.time() - t0:.0f} s)", flush=True)
+            k += 1
+    owner, segs = attempts_at({**base, "view_yaw_at": 0, "view_pitch_at": 0}, k)
+    mirrored = [mirror(s) for s in segs]
+    mirror_tests = {"as_is": first(owner, segs), "both_ways": first(owner, segs, both=True),
+                    "mirrored_as_is": first(owner, mirrored), "mirrored_both_ways": first(owner, mirrored, both=True)}
+    print("front view, as is {as_is:.1%}, both ways {both_ways:.1%}; mirrored camera or left-handed signer: as is "
+          "{mirrored_as_is:.1%}, both ways {mirrored_both_ways:.1%}".format(**mirror_tests), flush=True)
+    out = {"run": run.name, "signs": len(refs), "attempts_per_position": attempts, "grid": grid, "mirror": mirror_tests,
+           "trained_up_to": {"yaw": VIEW_STRONG["view_yaw_deg"], "pitch": VIEW_STRONG["view_pitch_deg"]},
+           "note": "simulated camera errors on one signer's videos; not occlusion, not other people"}
+    (run / "perspectives.json").write_text(json.dumps(out, indent=1))
+    print(f"-> {run / 'perspectives.json'} ({time.time() - t0:.0f} s)")
+    return run / "perspectives.json"
+
+
 def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: int = 11, closest: int = 5) -> Path:
     """Per-sign results of a trained run, for the sign browser: each reference's closest signs by embedding, and how
     often simulated attempts at it (normal and harder variation) are recognised first among every dictionary sign.
@@ -372,6 +491,8 @@ def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: 
     v1 = {index[w] if w in index else index.get(w + " 1") for w in vocab} - {None}
     ref_desc = np.stack([segment_descriptor(r, p_dtw.weights) for r in dtw_refs]).astype(np.float64)
     p_sim = dataclasses.replace(p, segmenter=dataclasses.replace(p.segmenter, rest_height=VIDEO_REST_HEIGHT))
+    from .groups import KINDS, sign_kinds
+    kinds = sign_kinds(ids)
     tests = {"normal": dict(cfg.calibrate.augment), "harder": {**dict(cfg.train.augment), "finger_noise_rad": 0.15},
              "viewpoint": {**dict(cfg.calibrate.augment), **VIEW_TEST}}
     summary = {}
@@ -404,14 +525,17 @@ def sign_results(cfg: Config, run: Path | None = None, attempts: int = 3, seed: 
                 r["dtw_tests"] = r.get("dtw_tests", 0) + 1
                 r["dtw_first"] = r.get("dtw_first", 0) + int(dtw_top[a] == i)
         hits = np.array([top[a] == i for a, i in enumerate(owner)])
-        summary[name] = {"tests": len(owner), "first": float(hits.mean()) if len(hits) else None,
+        kind_of = np.array([kinds[ids[i]]["kind"] for i in owner])
+        by_kind = {k: round(float(hits[kind_of == k].mean()), 4) for k in KINDS if (kind_of == k).any()}
+        summary[name] = {"tests": len(owner), "first": float(hits.mean()) if len(hits) else None, "by_kind": by_kind,
                          "signs_always_first": int(sum(results[c][name]["tests"] > 0 and
                                                        results[c][name]["first"] == results[c][name]["tests"] for c in ids))}
         if dtw_top:
             v1_hits = [top[a] == owner[a] for a in dtw_top]
             summary[name]["v1_first"] = float(np.mean(v1_hits))
             summary[name]["v1_dtw_first"] = float(np.mean([dtw_top[a] == owner[a] for a in dtw_top]))
-        print(f"{name}: {len(owner)} attempts, recognised first {summary[name]['first']:.1%} ({time.time() - t0:.0f} s)", flush=True)
+        print(f"{name}: {len(owner)} attempts, recognised first {summary[name]['first']:.1%} ("
+              + ", ".join(f"{k} {v:.1%}" for k, v in by_kind.items()) + f") ({time.time() - t0:.0f} s)", flush=True)
 
     report = json.loads((run / "report.json").read_text()) if (run / "report.json").exists() else {}
     out = {"run": run.name, "trained_on": trained_on, "signs": len(refs), "attempts_per_sign": attempts, "frames": p.seq_len,
