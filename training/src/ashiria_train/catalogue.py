@@ -22,6 +22,8 @@ HEADER = """\
 # Ashiria sign catalogue: what the app teaches. Edit freely; `ashiria catalogue` only adds new words.
 #   tier:   auto (computed from tracking checks) | scored | lenient | watch (shown, never scored)
 #   hint:   the team's own words, shown after two misses (never text from the KSL Dictionary)
+#   steps:  optional, the avatar coach's captions in the team's own words: the start, each movement, the end
+#           (laid over the coach's motion; without them, captions come from the motion and the dictionary's facts)
 #   review: set status to approved (with by/date) once the sign's Studio recording has been checked
 #   sources.dictionary: the KSL Dictionary sign used as a draft until Studio takes replace it
 """
@@ -124,6 +126,9 @@ def validate(cat: dict) -> None:
             problems.append(f"{sid}: unknown unit {s.get('unit')!r}")
         if s.get("tier") not in TIER_CHOICES:
             problems.append(f"{sid}: tier must be one of {', '.join(TIER_CHOICES)}")
+        steps = s.get("steps")
+        if steps is not None and (not isinstance(steps, list) or not all(isinstance(t, str) and t.strip() for t in steps)):
+            problems.append(f"{sid}: steps must be a list of sentences")
         if (s.get("review") or {}).get("status") not in REVIEW_STATUS:
             problems.append(f"{sid}: review.status must be one of {', '.join(REVIEW_STATUS)}")
     if problems:

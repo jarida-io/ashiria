@@ -1,6 +1,8 @@
 # Ashiria sign catalogue: what the app teaches. Edit freely; `ashiria catalogue` only adds new words.
 #   tier:   auto (computed from tracking checks) | scored | lenient | watch (shown, never scored)
 #   hint:   the team's own words, shown after two misses (never text from the KSL Dictionary)
+#   steps:  optional, the avatar coach's captions in the team's own words: the start, each movement, the end
+#           (laid over the coach's motion; without them, captions come from the motion and the dictionary's facts)
 #   review: set status to approved (with by/date) once the sign's Studio recording has been checked
 #   sources.dictionary: the KSL Dictionary sign used as a draft until Studio takes replace it
 pack_id: ksl-core
@@ -24,6 +26,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an A: a fist with your thumb resting against the side of your index finger. Hold it up beside your shoulder, palm
+    facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -40,6 +46,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a B: four fingers straight up and together, thumb folded across your palm. Hold it up beside your shoulder, palm
+    facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -56,6 +66,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a C: curve your fingers and thumb into a C. Hold it up beside your shoulder, turned a little to the left so the
+    C shows.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -72,6 +86,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a D: index finger straight up, the other fingertips touching your thumb tip. Hold it up beside your shoulder, palm
+    facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -88,6 +106,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an E: thumb folded across your palm, fingertips bent down to rest on it. Hold it up beside your shoulder, palm facing
+    away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -104,6 +126,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an F: index fingertip touching your thumb tip, the other three fingers up and a little apart. Hold it up beside
+    your shoulder, palm facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -120,6 +146,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a G: index finger and thumb pointing to the left, parallel and not touching, the other fingers folded. Hold it up
+    beside your shoulder.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -136,6 +166,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an H: index and middle fingers together, pointing to the left, the other fingers folded. Hold it up beside your
+    shoulder, palm facing you.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -152,6 +186,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an I: little finger straight up, the other fingers folded under your thumb. Hold it up beside your shoulder, palm
+    facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -168,6 +206,11 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Start with an I: little finger straight up, the other fingers folded under your thumb. Hold it up beside your shoulder,
+    palm facing away.'
+  - 'Draw a J with your little finger: down, then curving to the left.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -184,6 +227,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a K: index and middle fingers up, the middle one angled forward, thumb touching its back. Hold it up beside your
+    shoulder, palm facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -200,6 +247,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an L: index finger straight up and thumb out to the side, at a right angle. Hold it up beside your shoulder, palm
+    facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -216,6 +267,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an M: thumb across your palm, all four fingers folded down over it. Hold it up beside your shoulder, palm facing
+    away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -232,6 +287,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an N: ring and little fingers folded, thumb touching the ring finger, index and middle fingers folded over the thumb.
+    Hold it up beside your shoulder, palm facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -248,6 +307,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an O: curve all your fingers so your thumb tip touches your index fingertip. Hold it up beside your shoulder, palm
+    facing left so the O shows.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -264,6 +327,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a P: like a K tipped over, index finger level and pointing forward, middle finger pointing down. Hold it up beside
+    your shoulder, palm down.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -280,6 +347,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a Q: index finger and thumb pointing down, parallel and not touching, the other fingers folded. Hold it up beside
+    your shoulder.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -296,6 +367,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an R: index and middle fingers up and crossed, index in front, the others held down by your thumb. Hold it up beside
+    your shoulder, palm facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -312,6 +387,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an S: a fist with your thumb across your index and middle fingers. Hold it up beside your shoulder, palm facing
+    away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -328,6 +407,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a T: thumb pointing up between your index and middle fingers, index finger folded over its tip. Hold it up beside
+    your shoulder, palm facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -344,6 +427,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a U: index and middle fingers straight up and together, the others held down by your thumb. Hold it up beside your
+    shoulder, palm facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -360,6 +447,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a V: index and middle fingers straight up and apart, the others held down by your thumb. Hold it up beside your
+    shoulder, palm facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -376,6 +467,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a W: index, middle and ring fingers up and a little apart, little finger touching your thumb. Hold it up beside
+    your shoulder, palm facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -392,6 +487,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an X: index finger up and hooked, the other fingers folded under your thumb. Hold it up beside your shoulder, palm
+    facing left.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -408,6 +507,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a Y: thumb and little finger stretched out wide, the other fingers folded. Hold it up beside your shoulder, palm
+    facing away.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -424,6 +527,11 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Start with your index finger pointing up, the other fingers folded under your thumb. Hold it up beside your shoulder,
+    palm facing away.
+  - 'Draw a Z with your fingertip: across to the right, down to the left, then across to the right again.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -440,6 +548,9 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Make an O with your right hand. Hold it up beside your shoulder, upright, palm facing away.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -456,6 +567,9 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Hold up your right index finger, the other fingers folded, palm facing left.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -472,6 +586,9 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Hold up your right index and middle fingers in a V, palm facing you.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -488,6 +605,9 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Hold up your right middle, ring and little fingers, with your index finger and thumb folded, palm facing you.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -504,6 +624,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Hold up all four fingers, thumb folded on your palm: index and middle together, ring and little together. Palm facing
+    you.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -520,6 +644,9 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a closed fist with your right hand: in KSL, five is a fist. Hold it up, palm facing you.'
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -536,6 +663,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a fist with your left hand: that is five.'
+  - Hold up your right index finger (one) and touch it to the knuckles of your left fist.
+  - Hold it for a moment, then lower your hands.
   facial_grammar: false
   recognise: null
   sources:
@@ -552,6 +683,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a fist with your left hand: that is five.'
+  - Make a V with your right hand (two) and touch it to the knuckles of your left fist.
+  - Hold it for a moment, then lower your hands.
   facial_grammar: false
   recognise: null
   sources:
@@ -568,6 +703,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a fist with your left hand: that is five.'
+  - Hold up your right middle, ring and little fingers (three) and bring them to the knuckles of your left fist.
+  - Hold it for a moment, then lower your hands.
   facial_grammar: false
   recognise: null
   sources:
@@ -584,6 +723,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make a fist with your left hand: that is five.'
+  - Hold up all four fingers of your right hand (four) and bring them to the knuckles of your left fist.
+  - Hold it for a moment, then lower your hands.
   facial_grammar: false
   recognise: null
   sources:
@@ -600,6 +743,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - 'Make an A with each hand: fists, thumbs against the side, palms facing each other, a little apart.'
+  - Bring your two fists together.
+  - Hold it for a moment, then lower your hands.
   facial_grammar: false
   recognise: null
   sources:
@@ -616,6 +763,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Bring your right hand up beside your forehead, fingers together.
+  - Move it a little out and down, away from your head, as the coach shows.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -632,6 +783,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Bring your right hand up in front of your chest, fingers together.
+  - Move it slightly forward, as the coach shows.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -648,6 +803,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Make a fist with your right hand and place it on the middle of your chest, palm facing you.
+  - Rub it round in small circles, about 4 cm across, three times.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -664,6 +823,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Make a thumbs-up with both hands, palms facing each other.
+  - Shake both hands slightly from side to side, two or three times.
+  - Hold it for a moment, then lower your hands.
   facial_grammar: false
   recognise: null
   sources:
@@ -680,6 +843,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Hold your left hand flat, palm up. Bend your right hand at the knuckles, fingers together, palm down, above it.
+  - Bring your right fingertips down onto your left palm.
+  - Hold it for a moment, then lower your hands.
   facial_grammar: false
   recognise: null
   sources:
@@ -696,6 +863,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Hold your right hand flat, fingers together, palm facing you.
+  - Cover your right ear with your palm.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -712,6 +883,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Bring your right fingertips together onto your thumb (a flat O), palm facing down, in front of your mouth.
+  - Tap your fingertips against your mouth, about three times.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -728,6 +903,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Curve your right hand into a C, palm facing left, just below your chin.
+  - Move it up to your open lips, then tip your wrist upwards there.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -744,6 +923,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Hold your right hand flat, fingers together, palm facing you.
+  - Pat your right cheek lightly with your fingers.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -760,6 +943,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Point your right index finger up, palm facing left, in front of your mouth.
+  - Tap your mouth with it twice.
+  - Hold it still for a moment, then lower your hand.
   facial_grammar: false
   recognise: null
   sources:
@@ -776,6 +963,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Hold both hands flat, palms up, your right arm laid across your left so your right hand rests over your left wrist.
+  - Rock your arms from side to side, as if cradling a baby.
+  - Hold it for a moment, then lower your hands.
   facial_grammar: false
   recognise: null
   sources:
@@ -792,6 +983,10 @@ signs:
   tier: auto
   tier_note: ''
   hint: ''
+  steps:
+  - Make fists with both hands, palms facing you, by the sides of your chest, elbows bent.
+  - Flap your arms up and down, two or three times.
+  - Hold it for a moment, then lower your hands.
   facial_grammar: false
   recognise: null
   sources:

@@ -82,6 +82,11 @@ def main(argv: list[str] | None = None) -> None:
     p = steps.add_parser("embed", help="experiment: sign embedding over all dictionary signs, compared with DTW")
     p.add_argument("--epochs", type=int, default=60)
     p.add_argument("--attempts", type=int, default=4)
+    p = steps.add_parser("steps-check", help="how often the avatar's step captions agree with the dictionary descriptions")
+    p.add_argument("--limit", type=int)
+    p.add_argument("--rules", action="store_true", help="the hand-written rules only, without the fitted model")
+    p = steps.add_parser("steps-fit", help="fit the step captions' calls to the dictionary descriptions (exports/steps)")
+    p.add_argument("--limit", type=int)
     p = steps.add_parser("catalogue", help="create or extend content/catalogue/<pack>.yaml from a vocabulary file")
     p.add_argument("--vocab", default="configs/vocabulary_v1.txt")
     p.add_argument("--pack", default="ksl-core")
@@ -133,6 +138,12 @@ def main(argv: list[str] | None = None) -> None:
     elif args.step == "pack":
         from .pack import build_pack
         build_pack(cfg, args.pack, args.release, args.attempts)
+    elif args.step == "steps-check":
+        from .steps_check import check
+        check(args.limit, use_model=not args.rules)
+    elif args.step == "steps-fit":
+        from .steps_fit import run_fit
+        run_fit(args.limit)
     elif args.step == "import-studio":
         from .studio import import_studio
         import_studio(cfg, args.folder, args.keep_outliers, args.pack)

@@ -8,6 +8,8 @@ in the dictionary's data sheet, with MediaPipe landmarks and the reference Ashir
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 import json
 from pathlib import Path
 
@@ -193,11 +195,26 @@ def clip_pose(clip_id: str) -> dict | None:
             "shoulders": r(smooth(body[:, 0:2]), 3), "elbows": r(smooth(body[:, 2:4]), 3), "hips": r(smooth(body[:, 4:6]), 3),
             "face": r(smooth(body[:, 6:13], 5), 3)}
     from .steps import sign_steps
-    pose["learn"] = sign_steps(pose)
+    pose["learn"] = sign_steps(pose, known=clip_facts(clip_id))
     return pose
 
 
-def mirror_pose(pose: dict) -> dict:
+@lru_cache(maxsize=1)
+def _descriptions() -> dict[str, str]:
+    from .steps_check import described_clips
+    d = described_clips()
+    return dict(zip(d["clip"], d["description"]))
+
+
+def clip_facts(clip_id: str) -> dict | None:
+    """What the clip's dictionary description says (handshape, palm, place, hands, movement), as facts for the step
+    captions, which put them in Ashiria's own words. None if the clip has no description."""
+    from .steps_check import read_description
+    text = _descriptions().get(clip_id)
+    return read_description(text) if text else None
+
+
+def mirror_pose(pose: dict, known: dict | None = None) -> dict:
     """A clip_pose mirrored left to right (x flipped, the two sides swapped), for a clip signed with the left hand."""
     def flip(a, swap_slots=True):
         a = np.array(a, float)
@@ -210,7 +227,7 @@ def mirror_pose(pose: dict) -> dict:
         face = np.array(flip(pose["face"], swap_slots=False))
         out["face"] = face[:, [0, 2, 1, 4, 3, 6, 5]].tolist()
     from .steps import sign_steps
-    out["learn"] = sign_steps(out)
+    out["learn"] = sign_steps(out, known=known)
     return out
 
 
@@ -236,8 +253,13 @@ def sign_avatar(cfg: Config, sign_id: str, pack_id: str = "ksl-core") -> dict | 
     f = dcfg.features
     seg = trim(gap_fill(seg, f.gap_fill_frames), f.rest_height, f.trim_margin_frames) if seg is not None else None
     lift = hand_lifts(seg) if seg is not None else np.zeros(2)
+    # The catalogue's written steps come first, then the facts in the clip's description.
+    known = {**(clip_facts(clip) or {}), **({"steps_text": entry["steps"]} if entry.get("steps") else {})}
     if lift[J.LEFT] > 1.3 * lift[J.RIGHT]:
-        pose = mirror_pose(pose)
+        pose = mirror_pose(pose, known)
+    else:
+        from .steps import sign_steps
+        pose["learn"] = sign_steps(pose, known=known)
     return {"sign": sign_id, "gloss": entry["gloss"], **pose}
 
 
