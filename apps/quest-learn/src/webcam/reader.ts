@@ -6,6 +6,7 @@ import {
   AttemptSegmenter, FEATURE_DIM, TickClock, mirror, paramsFromJson, prepare, sequenceFeatures,
   type EngineParams, type Frame, type Segment,
 } from '@ashiria/engine';
+import { importFresh } from './load.js';
 
 const BASE = '/dev/recogniser';
 const ORT = '/node_modules/onnxruntime-web/dist';
@@ -45,7 +46,7 @@ export class SignReader {
     if (!res.ok) throw new Error('No recogniser yet: run `ashiria export-recogniser`.');
     const meta: Meta = await res.json();
     const refs = new Float32Array(await (await fetch(`${BASE}/refs.f32`)).arrayBuffer());
-    const ort = await import(/* @vite-ignore */ `${ORT}/ort.wasm.min.mjs`);
+    const ort = await importFresh(`${ORT}/ort.wasm.min.mjs`);
     ort.env.wasm.wasmPaths = `${ORT}/`;
     ort.env.wasm.numThreads = 1; // threads need cross-origin isolation, which the dev server doesn't set
     const session = await ort.InferenceSession.create(`${BASE}/model.onnx`, { executionProviders: ['wasm'] });

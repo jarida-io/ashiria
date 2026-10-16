@@ -2,6 +2,7 @@
 // videos (training/models/mediapipe), so a webcam signer is seen the way the references were. Frames stay on the
 // device; nothing is uploaded. Development only for now: the models and MediaPipe's runtime come from the dev server.
 import type { CameraHand, Point } from '@ashiria/engine';
+import { importFresh } from './load.js';
 
 const MEDIAPIPE = '/node_modules/@mediapipe/tasks-vision';
 const MODELS = '/dev/mediapipe';
@@ -32,7 +33,7 @@ export async function openVision(onStatus: (text: string) => void = () => {}): P
   await video.play();
 
   onStatus('Loading hand tracking…');
-  const mp = await import(/* @vite-ignore */ `${MEDIAPIPE}/vision_bundle.mjs`);
+  const mp = await importFresh(`${MEDIAPIPE}/vision_bundle.mjs`);
   const files = await mp.FilesetResolver.forVisionTasks(`${MEDIAPIPE}/wasm`);
   const create = async (Task: any, options: any): Promise<Landmarker> => {
     try {
