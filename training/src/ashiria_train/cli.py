@@ -98,6 +98,8 @@ def main(argv: list[str] | None = None) -> None:
                    help="share of each batch given to look-alike neighbourhoods (needs `ashiria sign-groups`; 0 = random)")
     p.add_argument("--context-share", type=float, default=0.0,
                    help="share of training pairs where one view is the sign cut out of a sentence (phrases.py)")
+    p.add_argument("--init-run", help="fine-tune this run's model instead of training from scratch")
+    p.add_argument("--lr", type=float, default=1e-3, help="peak learning rate (fine-tuning: about 3e-4)")
     p = steps.add_parser("steps-check", help="how often the avatar's step captions agree with the dictionary descriptions")
     p.add_argument("--limit", type=int)
     p.add_argument("--rules", action="store_true", help="the hand-written rules only, without the fitted model")
@@ -221,7 +223,7 @@ def main(argv: list[str] | None = None) -> None:
     elif args.step == "embed":
         from .embed import run_embed
         run_embed(cfg, epochs=args.epochs, attempts=args.attempts, lookalike_share=args.lookalike_share,
-                  context_share=args.context_share)
+                  context_share=args.context_share, init_run=args.init_run, lr=args.lr)
     elif args.step == "catalogue":
         from .catalogue import update_catalogue
         update_catalogue(cfg, args.vocab, args.pack)
