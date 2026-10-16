@@ -104,7 +104,7 @@ export function ashiriaDev(): Plugin {
         const parts = (req.url ?? '/').split('?')[0].split('/').filter(Boolean);
         if (parts.length === 1 && parts[0] === 'index.json')
           return send(res, 200, listPacks(PACKS).map((p) => ({ id: p.id, distribution: (p.manifest as { distribution: string }).distribution })));
-        if (parts.length !== 2 || !SAFE.test(parts[0]) || !['manifest.json', 'catalogue.json', 'references.json'].includes(parts[1]))
+        if (parts.length !== 2 || !SAFE.test(parts[0]) || !['manifest.json', 'catalogue.json', 'references.json', 'coach.json'].includes(parts[1]))
           return send(res, 404, { error: 'not found' });
         const file = join(PACKS, parts[0], parts[1]);
         if (!existsSync(file)) return send(res, 404, { error: 'not found' });

@@ -136,6 +136,24 @@ def test_forbidden_fields_and_release_rules(pack, tmp_path):
     assert json.loads((out / "manifest.json").read_text())["distribution"] == "release"
 
 
+def test_pack_carries_the_coach_hashed_and_checked(pack, tmp_path):
+    _, catalogue, sources = pack
+    sid = catalogue["signs"][0]["id"]
+    coach = {sid: {"fps": 24.0, "frames": 1, "present": [[1, 0]], "hand_rel": [[[[0.0] * 3] * 21] * 2],
+                   "wrist_pos": [[[0.0] * 3] * 2], "learn": {"hands": ["right hand"], "steps": [
+                       {"kind": "start", "from": 0, "to": 0, "key": 0, "text": "Start with your right hand."}]}},
+             "not-in-pack": {"fps": 24.0}}
+    out = write_pack(catalogue, sources, [], {}, P, AUG, tmp_path, attempts=4, coach=coach)
+    manifest = json.loads((out / "manifest.json").read_text())
+    coach_bytes = (out / "coach.json").read_bytes()
+    assert manifest["files"]["coach"]["sha256"] == hashlib.sha256(coach_bytes).hexdigest()
+    assert list(json.loads(coach_bytes)["signs"]) == [sid]
+    # The coach is checked like the rest: no dictionary text or clip ids.
+    with pytest.raises(SystemExit, match="forbidden"):
+        write_pack(catalogue, sources, [], {}, P, AUG, tmp_path, attempts=4,
+                   coach={sid: {**coach[sid], "description": "dictionary text"}})
+
+
 def test_dictionary_clip_choice_prefers_label_then_alias_then_lowest_variant():
     from ashiria_train.references import choose_clip
     labels = {"g": "gratitude", "t": "thank you", "i2": "i 2", "i1": "i 1", "f3": "father 3", "f1": "father 1"}

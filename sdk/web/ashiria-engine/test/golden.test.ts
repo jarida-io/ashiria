@@ -1,6 +1,7 @@
 // Parity with the Python reference on spec/golden (the same vectors the C# tests use).
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import {
   AttemptSegmenter, activeWindow, defaultParams, descriptor, dtw, FEATURE_DIM, fingerErrors, flexion, FrameBuilder, gapFill,
@@ -61,6 +62,20 @@ test('runtime_v1: pack loading, self-check and damage detection', async () => {
   assert.ok(check.ok, `self-check ${check.actual} vs ${check.expected}`);
   const damaged = read(`${g.pack}/references.json`).replace('"tau":', '"tau": ');
   await assert.rejects(parsePack(read(`${g.pack}/manifest.json`), read(`${g.pack}/catalogue.json`), damaged), /does not match/);
+});
+
+test('pack: the avatar coach is optional, hash-checked when listed', async () => {
+  const g = json('runtime_v1.json');
+  const [cat, refs] = [read(`${g.pack}/catalogue.json`), read(`${g.pack}/references.json`)];
+  const id = JSON.parse(cat).signs[0].id;
+  const coach = JSON.stringify({ signs: { [id]: { fps: 24, frames: 1, present: [[1, 0]], learn: { hands: ['right hand'], steps: [] } } } });
+  const hash = createHash('sha256').update(coach).digest('hex');
+  const manifest = JSON.parse(read(`${g.pack}/manifest.json`));
+  manifest.files.coach = { path: 'coach.json', sha256: hash };
+  const pack = await parsePack(JSON.stringify(manifest), cat, refs, true, coach);
+  assert.equal(pack.coach.get(id)?.fps, 24);
+  assert.equal((await loadPack(g.pack)).coach.size, 0);
+  await assert.rejects(parsePack(JSON.stringify(manifest), cat, refs, true, coach.replace('24', '25')), /coach.json does not match/);
 });
 
 test('runtime_v1: prepare, Quest frames, segmenter', async () => {

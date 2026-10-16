@@ -1,9 +1,10 @@
 """`ashiria pack`: the content pack the headset loads (spec/CONTENT_PACK.md).
 
-content/packs/<pack_id>-<version>/ (git-ignored) holds three JSON files:
+content/packs/<pack_id>-<version>/ (git-ignored) holds these JSON files:
   manifest.json    format, versions, rights, engine parameters (calibrated), file hashes, a self-check
   catalogue.json   units and signs: what to teach, tiers and their reasons, hints, look-alikes
   references.json  per sign: reference takes (hand poses only), tolerances, tau
+  coach.json       per sign: the avatar coach's body and hand motion and its steps (our own wording)
 
 Packs never contain video, images or the KSL Dictionary's text, and only pseudonymous signer ids.
 `--release` ships only signs with distributable references (Studio takes, or dictionary drafts once the
@@ -124,11 +125,31 @@ def build_pack(cfg: Config, pack_id: str = "ksl-core", release: bool = False, at
     sources, missing = assemble(catalogue, load_dictionary(DICTIONARY), load_studio(STUDIO))
     distractors = distractor_segments(Path(DICTIONARY).parent / "distractors.npz")
     return write_pack(catalogue, sources, missing, load_rights(cfg), EngineParams.from_config(cfg),
-                      dict(cfg.calibrate.augment), content_dir(cfg) / "packs", release, attempts, distractors)
+                      dict(cfg.calibrate.augment), content_dir(cfg) / "packs", release, attempts, distractors,
+                      coach_poses(cfg, pack_id, [e["id"] for e in catalogue["signs"]]))
+
+
+def coach_poses(cfg: Config, pack_id: str, ids: list[str]) -> dict:
+    """The avatar coach for each sign that has one: its motion (3 decimals: millimetres for the hands) and steps,
+    without the internal facts the step generator is checked with."""
+    from .study import sign_avatar
+
+    out = {}
+    for sid in ids:
+        av = sign_avatar(cfg, sid, pack_id)
+        if not av or not (av.get("learn") or {}).get("steps"):
+            continue
+        learn = {k: v for k, v in av["learn"].items() if k != "facts"}
+        out[sid] = {"fps": round(float(av["fps"]), 4), "frames": int(av["frames"]), "present": av["present"],
+                    **{k: np.round(np.asarray(av[k], float), 3).tolist()
+                       for k in ("hand_rel", "wrist_pos", "shoulders", "elbows", "hips", "face") if k in av},
+                    "learn": learn}
+    return out
 
 
 def write_pack(catalogue: dict, sources: dict, missing: list[str], rights: dict, p: EngineParams, aug: dict,
-               out_root: Path, release: bool = False, attempts: int = 16, distractors=()) -> Path:
+               out_root: Path, release: bool = False, attempts: int = 16, distractors=(),
+               coach: dict | None = None) -> Path:
     pack_id = catalogue["pack_id"]
     if release:
         sources, left_out, problems = release_selection(catalogue, sources, missing, rights)
@@ -168,10 +189,11 @@ def write_pack(catalogue: dict, sources: dict, missing: list[str], rights: dict,
         ref_json["signs"][sid] = {"takes": [take_json(t, signer) for t in ref.takes], "shadow_take": ref.shadow_take,
                                   "tau": round(ref.tau, 4), "tol": ref.tol.to_json()}
 
-    bad = forbidden_keys(cat_json) + forbidden_keys(ref_json)
+    coach_json = {"signs": {sid: coach[sid] for sid in ids if sid in (coach or {})}}
+    bad = forbidden_keys(cat_json) + forbidden_keys(ref_json) + forbidden_keys(coach_json)
     if bad:
         raise SystemExit(f"Refusing to write a pack with forbidden fields: {bad[:5]}")
-    cat_bytes, ref_bytes = _dump(cat_json), _dump(ref_json)
+    cat_bytes, ref_bytes, coach_bytes = _dump(cat_json), _dump(ref_json), _dump(coach_json)
 
     # Self-check: the headset recomputes this from the file as written (after rounding) and compares.
     first = ref_json["signs"][ids[0]]["takes"][0]
@@ -190,7 +212,9 @@ def write_pack(catalogue: dict, sources: dict, missing: list[str], rights: dict,
         "calibration": {"method": "simulated", "attempts_per_sign": report["attempts_per_sign"],
                         "rates": report["rates"]["pooled"]},
         "files": {"catalogue": {"path": "catalogue.json", "sha256": hashlib.sha256(cat_bytes).hexdigest()},
-                  "references": {"path": "references.json", "sha256": hashlib.sha256(ref_bytes).hexdigest()}},
+                  "references": {"path": "references.json", "sha256": hashlib.sha256(ref_bytes).hexdigest()},
+                  **({"coach": {"path": "coach.json", "sha256": hashlib.sha256(coach_bytes).hexdigest()}}
+                     if coach_json["signs"] else {})},
         "content_hash": hashlib.sha256(cat_bytes + ref_bytes).hexdigest(),
         "selfcheck": {"sign_id": ids[0], "take": 0, "descriptor_sum": round(check, 4), "tolerance": 1e-2},
     }
@@ -198,12 +222,16 @@ def write_pack(catalogue: dict, sources: dict, missing: list[str], rights: dict,
     out.mkdir(parents=True, exist_ok=True)
     (out / "catalogue.json").write_bytes(cat_bytes)
     (out / "references.json").write_bytes(ref_bytes)
+    if coach_json["signs"]:
+        (out / "coach.json").write_bytes(coach_bytes)
+    elif (out / "coach.json").exists():
+        (out / "coach.json").unlink()  # a stale coach from an earlier build of this version
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1, sort_keys=True))
     size = sum(f.stat().st_size for f in out.iterdir()) / 1e6
     tiers = [s["tier"] for s in cat_json["signs"]]
     print(f"{pack_id} {catalogue['version']} ({manifest['distribution']}): {len(ids)} signs "
           f"({tiers.count('scored')} scored, {tiers.count('lenient')} lenient, {tiers.count('watch')} watch-only), "
-          f"{size:.1f} MB -> {out}")
+          f"avatar coach for {len(coach_json['signs'])}, {size:.1f} MB -> {out}")
     if not release:
         print("Internal pack, for development. For the hosted app, approve signs (`ashiria approve`) and build "
               "with --release.")

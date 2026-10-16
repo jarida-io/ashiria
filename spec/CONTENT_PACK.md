@@ -86,6 +86,26 @@ What the headset loads to teach and check signs. `ashiria pack` builds one from 
 
 **`shadow_take`** is the take the app animates as the shadow hand (the medoid of the Studio takes).
 
+### coach.json (optional)
+
+The avatar coach: for each sign that has one, the motion the app's coach figure plays and the steps it teaches.
+Packs without it still load (the coach then stays hidden), and `manifest.files.coach` lists it with its sha256
+when it is there.
+
+```json
+{"signs": {"letter-a": {
+   "fps": 23.976, "frames": 78, "present": [[1, 0], "…frames×2"],
+   "hand_rel": ["frames×2×21×3, metres from the wrist, 3 dp"], "wrist_pos": ["frames×2×3, shoulder widths, 3 dp"],
+   "shoulders": ["frames×2×3"], "elbows": ["frames×2×3"], "hips": ["frames×2×3"],
+   "face": ["frames×7×3: nose, left and right eye, left and right ear, left and right mouth corner"],
+   "learn": {"hands": ["right hand"], "dominant": "right hand",
+             "steps": [{"kind": "start", "from": 31, "to": 41, "key": 41, "text": "Start with your right hand: …"}]}}}}
+```
+
+Same body frame as the references (x the signer's right, y up, z the way they face; slot 0 their right hand).
+Left-handed dictionary clips are mirrored, like their references. Step texts are Ashiria's own wording, generated
+from the motion (training `steps.py`), never the dictionary's descriptions.
+
 **Tolerances** are final per-sign values:
 - the tier default (`params.VerifyParams`);
 - widened for the thumb (×1.4) and for dictionary-sourced signs (×1.25, fingers and spread);
@@ -95,5 +115,5 @@ The headset only multiplies them by the user's strictness.
 
 ## Size and loading
 
-The 72-sign dictionary pack is about 2.5 MB. Parse it off the main thread after the first frame is
+The 49-sign dictionary pack is about 6.5 MB without the coach. Parse it off the main thread after the first frame is
 shown: `ContentPack.Parse` → `SelfCheck` → ready.

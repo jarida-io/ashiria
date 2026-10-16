@@ -18,10 +18,20 @@ export interface CatalogueSign {
 
 export interface Unit { id: string; title: string; order: number }
 
+export interface CoachStep { kind: 'start' | 'move' | 'end'; from: number; to: number; key: number; text: string }
+/** The avatar coach's motion for one sign (spec/CONTENT_PACK.md, coach.json): body frame, frames × slots. */
+export interface CoachPose {
+  fps: number; frames: number; present: number[][]; hand_rel: number[][][][]; wrist_pos: number[][][];
+  shoulders: number[][][]; elbows: number[][][]; hips: number[][][]; face?: number[][][];
+  learn?: { hands: string[]; dominant?: string; steps: CoachStep[] };
+}
+
 export interface ContentPack {
   packId: string; version: string; distribution: 'internal' | 'release'; contentHash: string;
   params: EngineParams; units: Unit[]; catalogue: CatalogueSign[]; signs: Map<string, SignRef>;
   selfcheck: { sign_id: string; take: number; descriptor_sum: number; tolerance: number };
+  /** Empty for packs built before the coach was packed. */
+  coach: Map<string, CoachPose>;
 }
 
 async function sha256(text: string): Promise<string> {
@@ -29,8 +39,10 @@ async function sha256(text: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Parse a pack from the text of its three files. Throws on a format, version or hash mismatch. */
-export async function parsePack(manifestText: string, catalogueText: string, referencesText: string, checkHashes = true): Promise<ContentPack> {
+/** Parse a pack from the text of its files (`coachText` when the manifest lists a coach). Throws on a format,
+ * version or hash mismatch. */
+export async function parsePack(manifestText: string, catalogueText: string, referencesText: string, checkHashes = true,
+  coachText: string | null = null): Promise<ContentPack> {
   const m: any = JSON.parse(manifestText);
   if (m.format !== FORMAT) throw new Error('not an Ashiria content pack');
   if (m.format_version !== FORMAT_VERSION) throw new Error(`content pack format ${m.format_version}; this app reads ${FORMAT_VERSION}`);
@@ -39,7 +51,10 @@ export async function parsePack(manifestText: string, catalogueText: string, ref
   if (checkHashes) {
     for (const [file, text] of [['catalogue', catalogueText], ['references', referencesText]] as const)
       if ((await sha256(text)) !== m.files[file].sha256) throw new Error(`${m.files[file].path} does not match the manifest (damaged or edited)`);
+    if (m.files.coach && coachText !== null && (await sha256(coachText)) !== m.files.coach.sha256)
+      throw new Error(`${m.files.coach.path} does not match the manifest (damaged or edited)`);
   }
+  const coachSigns = m.files.coach && coachText !== null ? (JSON.parse(coachText).signs as Record<string, CoachPose>) : {};
   const params = paramsFromJson(m.engine);
   const cat = JSON.parse(catalogueText) as { units: Unit[]; signs: CatalogueSign[] };
   const refs = JSON.parse(referencesText) as { signs: Record<string, { takes: any[]; shadow_take: number; tau: number; tol: Tolerances }> };
@@ -54,7 +69,7 @@ export async function parsePack(manifestText: string, catalogueText: string, ref
   }
   return {
     packId: m.pack_id, version: m.version, distribution: m.distribution, contentHash: m.content_hash, params,
-    units: cat.units, catalogue: cat.signs, signs, selfcheck: m.selfcheck,
+    units: cat.units, catalogue: cat.signs, signs, selfcheck: m.selfcheck, coach: new Map(Object.entries(coachSigns)),
   };
 }
 

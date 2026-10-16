@@ -5,8 +5,8 @@
  * on to signing from memory (recall) the coach finishes its demonstration and waits at rest, showing the sign again
  * after each miss. Hidden in Free Sign.
  *
- * Development only for now: each sign's avatar (pose and steps) comes from the dev server (/dev/avatar/<sign>).
- * Shipping it means adding the avatar data to the content pack.
+ * Each sign's avatar (motion and steps) comes from the content pack (coach.json); in development, signs the pack
+ * doesn't cover yet come from the dev server (/dev/avatar/<sign>).
  */
 import { createSystem, DirectionalLight, HemisphereLight, Vector3, VisibilityState } from '@iwsdk/core';
 import { app } from './app-state.js';
@@ -50,8 +50,11 @@ export class AvatarCoachSystem extends createSystem({}) {
     this.loading = true;
     this.signId = id;
     try {
-      const res = await fetch(`/dev/avatar/${encodeURIComponent(id)}`);
-      const pose: AvatarPose | null = res.ok ? await res.json() : null;
+      let pose: AvatarPose | null = app.pack?.coach.get(id) ?? null;
+      if (!pose && import.meta.env.DEV) {
+        const res = await fetch(`/dev/avatar/${encodeURIComponent(id)}`);
+        pose = res.ok ? await res.json() : null;
+      }
       if (this.signId !== id) return;
       this.figure.setPose(pose);
       this.learner = pose ? new LearnPlayer(pose) : null;
@@ -84,7 +87,7 @@ export class AvatarCoachSystem extends createSystem({}) {
 
   update(delta: number): void {
     const info = app.current;
-    if (import.meta.env.DEV && info && info.id !== this.signId && !this.loading) void this.load(info.id);
+    if (info && info.id !== this.signId && !this.loading) void this.load(info.id);
     const show = !!info && !!this.learner && app.mode !== 'free';
     const g = this.figure.group;
     g.visible = show;
