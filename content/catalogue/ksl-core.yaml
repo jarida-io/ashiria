@@ -35,9 +35,9 @@ signs:
   sources:
     dictionary: a
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-b
   gloss: B
   aliases: []
@@ -55,9 +55,9 @@ signs:
   sources:
     dictionary: b
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-c
   gloss: C
   aliases: []
@@ -75,9 +75,9 @@ signs:
   sources:
     dictionary: c
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-d
   gloss: D
   aliases: []
@@ -95,9 +95,9 @@ signs:
   sources:
     dictionary: d
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-e
   gloss: E
   aliases: []
@@ -115,9 +115,9 @@ signs:
   sources:
     dictionary: e
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-f
   gloss: F
   aliases: []
@@ -135,9 +135,9 @@ signs:
   sources:
     dictionary: f
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-g
   gloss: G
   aliases: []
@@ -155,9 +155,9 @@ signs:
   sources:
     dictionary: g
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-h
   gloss: H
   aliases: []
@@ -175,9 +175,9 @@ signs:
   sources:
     dictionary: h
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-i
   gloss: I
   aliases: []
@@ -195,9 +195,9 @@ signs:
   sources:
     dictionary: i
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-j
   gloss: J
   aliases: []
@@ -216,9 +216,9 @@ signs:
   sources:
     dictionary: j
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-k
   gloss: K
   aliases: []
@@ -236,9 +236,9 @@ signs:
   sources:
     dictionary: k
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-l
   gloss: L
   aliases: []
@@ -256,9 +256,9 @@ signs:
   sources:
     dictionary: l
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-m
   gloss: M
   aliases: []
@@ -276,9 +276,9 @@ signs:
   sources:
     dictionary: m
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-n
   gloss: N
   aliases: []
@@ -296,9 +296,9 @@ signs:
   sources:
     dictionary: n
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-o
   gloss: O
   aliases: []
@@ -316,9 +316,9 @@ signs:
   sources:
     dictionary: o
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-p
   gloss: P
   aliases: []
@@ -336,9 +336,9 @@ signs:
   sources:
     dictionary: p
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-q
   gloss: Q
   aliases: []
@@ -356,9 +356,9 @@ signs:
   sources:
     dictionary: q
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-r
   gloss: R
   aliases: []
@@ -376,9 +376,9 @@ signs:
   sources:
     dictionary: r
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-s
   gloss: S
   aliases: []
@@ -396,9 +396,9 @@ signs:
   sources:
     dictionary: s
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-t
   gloss: T
   aliases: []
@@ -416,9 +416,9 @@ signs:
   sources:
     dictionary: t
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-u
   gloss: U
   aliases: []
@@ -436,9 +436,9 @@ signs:
   sources:
     dictionary: u
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-v
   gloss: V
   aliases: []
@@ -456,9 +456,9 @@ signs:
   sources:
     dictionary: v
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-w
   gloss: W
   aliases: []
@@ -476,9 +476,9 @@ signs:
   sources:
     dictionary: w
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-x
   gloss: X
   aliases: []
@@ -496,9 +496,9 @@ signs:
   sources:
     dictionary: x
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-y
   gloss: Y
   aliases: []
@@ -516,9 +516,9 @@ signs:
   sources:
     dictionary: y
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: letter-z
   gloss: Z
   aliases: []
@@ -537,9 +537,9 @@ signs:
   sources:
     dictionary: z
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-zero
   gloss: zero
   aliases: []
@@ -556,9 +556,9 @@ signs:
   sources:
     dictionary: zero
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-one
   gloss: one
   aliases: []
@@ -575,9 +575,9 @@ signs:
   sources:
     dictionary: one
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-two
   gloss: two
   aliases: []
@@ -594,9 +594,9 @@ signs:
   sources:
     dictionary: two
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-three
   gloss: three
   aliases: []
@@ -613,9 +613,9 @@ signs:
   sources:
     dictionary: three
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-four
   gloss: four
   aliases: []
@@ -633,9 +633,9 @@ signs:
   sources:
     dictionary: four
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-five
   gloss: five
   aliases: []
@@ -652,9 +652,9 @@ signs:
   sources:
     dictionary: five
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-six
   gloss: six
   aliases: []
@@ -672,9 +672,9 @@ signs:
   sources:
     dictionary: six
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-seven
   gloss: seven
   aliases: []
@@ -692,9 +692,9 @@ signs:
   sources:
     dictionary: seven
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-eight
   gloss: eight
   aliases: []
@@ -712,9 +712,9 @@ signs:
   sources:
     dictionary: eight
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-nine
   gloss: nine
   aliases: []
@@ -732,9 +732,9 @@ signs:
   sources:
     dictionary: nine
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: number-ten
   gloss: ten
   aliases: []
@@ -752,9 +752,9 @@ signs:
   sources:
     dictionary: ten
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: hello
   gloss: hello
   aliases: []
@@ -772,9 +772,9 @@ signs:
   sources:
     dictionary: hello
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: thank-you
   gloss: thank you
   aliases: []
@@ -792,9 +792,9 @@ signs:
   sources:
     dictionary: thank you
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: sorry
   gloss: sorry
   aliases: []
@@ -812,9 +812,9 @@ signs:
   sources:
     dictionary: sorry
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: fine
   gloss: fine
   aliases: []
@@ -832,9 +832,9 @@ signs:
   sources:
     dictionary: fine
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: again
   gloss: again
   aliases: []
@@ -852,9 +852,9 @@ signs:
   sources:
     dictionary: again
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: deaf
   gloss: deaf
   aliases: []
@@ -872,9 +872,9 @@ signs:
   sources:
     dictionary: deaf
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: eat
   gloss: eat
   aliases: []
@@ -892,9 +892,9 @@ signs:
   sources:
     dictionary: eat
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: water
   gloss: water
   aliases: []
@@ -912,9 +912,9 @@ signs:
   sources:
     dictionary: water
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: mother
   gloss: mother
   aliases: []
@@ -932,9 +932,9 @@ signs:
   sources:
     dictionary: mother
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: father
   gloss: father
   aliases: []
@@ -952,9 +952,9 @@ signs:
   sources:
     dictionary: father
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: baby
   gloss: baby
   aliases: []
@@ -972,9 +972,9 @@ signs:
   sources:
     dictionary: baby
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
 - id: happy
   gloss: happy
   aliases: []
@@ -992,6 +992,6 @@ signs:
   sources:
     dictionary: happy
   review:
-    status: draft
-    by: null
-    date: null
+    status: approved
+    by: Jerry
+    date: '2026-10-16'
