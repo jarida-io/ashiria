@@ -21,17 +21,15 @@ export interface Vision {
   stop(): void;
 }
 
-/** Opens the camera (the browser asks for permission) and loads MediaPipe (about 17 MB, cached after the first time). */
-export async function openVision(onStatus: (text: string) => void = () => {}): Promise<Vision> {
-  onStatus('Asking for the camera…');
-  const stream = await navigator.mediaDevices.getUserMedia({
-    // 720p if the camera has it: MediaPipe crops each hand from the frame, so more pixels mean steadier fingers.
-    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false,
-  });
-  const video = document.createElement('video');
-  Object.assign(video, { srcObject: stream, muted: true, playsInline: true });
-  await video.play();
+export interface Landmarkers {
+  /** Hands and body in one frame (`ms` must increase from call to call). */
+  detect(source: HTMLVideoElement | HTMLCanvasElement, ms: number): CameraFrame;
+  close(): void;
+}
 
+/** MediaPipe's hand and pose landmarkers (about 17 MB, cached after the first time), set as in
+ * training/configs/default.yaml (extract) so what they see matches the references. */
+export async function openLandmarkers(onStatus: (text: string) => void = () => {}): Promise<Landmarkers> {
   onStatus('Loading hand tracking…');
   const mp = await importFresh(`${MEDIAPIPE}/vision_bundle.mjs`);
   const files = await mp.FilesetResolver.forVisionTasks(`${MEDIAPIPE}/wasm`);
@@ -42,7 +40,6 @@ export async function openVision(onStatus: (text: string) => void = () => {}): P
       return await Task.createFromOptions(files, { ...options, baseOptions: { ...options.baseOptions, delegate: 'CPU' } });
     }
   };
-  // Settings as in training/configs/default.yaml (extract), so live tracking matches the references.
   const hands = await create(mp.HandLandmarker, {
     baseOptions: { modelAssetPath: `${MODELS}/hand_landmarker.task` }, runningMode: 'VIDEO', numHands: 2,
     minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5,
@@ -51,6 +48,32 @@ export async function openVision(onStatus: (text: string) => void = () => {}): P
     baseOptions: { modelAssetPath: `${MODELS}/pose_landmarker_full.task` }, runningMode: 'VIDEO', numPoses: 1,
   });
   onStatus('');
+  return {
+    detect(source, ms) {
+      const h = hands.detectForVideo(source as HTMLVideoElement, ms);
+      const p = pose.detectForVideo(source as HTMLVideoElement, ms);
+      const labels = h.handedness ?? h.handednesses ?? [];
+      return {
+        hands: h.landmarks.map((image: Point[], k: number) => ({ image, world: h.worldLandmarks[k], label: labels[k]?.[0]?.categoryName ?? '' })),
+        pose: p.landmarks?.length && p.worldLandmarks?.length ? { image: p.landmarks[0], world: p.worldLandmarks[0] } : null,
+        time: ms,
+      };
+    },
+    close() { hands.close(); pose.close(); },
+  };
+}
+
+/** Opens the camera (the browser asks for permission) and MediaPipe's landmarkers. */
+export async function openVision(onStatus: (text: string) => void = () => {}): Promise<Vision> {
+  onStatus('Asking for the camera…');
+  const stream = await navigator.mediaDevices.getUserMedia({
+    // 720p if the camera has it: MediaPipe crops each hand from the frame, so more pixels mean steadier fingers.
+    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false,
+  });
+  const video = document.createElement('video');
+  Object.assign(video, { srcObject: stream, muted: true, playsInline: true });
+  await video.play();
+  const marks = await openLandmarkers(onStatus);
 
   let running = false, last = -1, mirrored = false;
   // A mirrored camera's frames are flipped back before tracking, so MediaPipe sees the signer as on video.
@@ -69,15 +92,7 @@ export async function openVision(onStatus: (text: string) => void = () => {}): P
       const ms = Math.max(performance.now(), last + 1); // MediaPipe needs increasing timestamps
       if (ms !== last) {
         last = ms;
-        const frame = source() as HTMLVideoElement;
-        const h = hands.detectForVideo(frame, ms);
-        const p = pose.detectForVideo(frame, ms);
-        const labels = h.handedness ?? h.handednesses ?? [];
-        frameHandler?.({
-          hands: h.landmarks.map((image: Point[], k: number) => ({ image, world: h.worldLandmarks[k], label: labels[k]?.[0]?.categoryName ?? '' })),
-          pose: p.landmarks?.length && p.worldLandmarks?.length ? { image: p.landmarks[0], world: p.worldLandmarks[0] } : null,
-          time: ms,
-        });
+        frameHandler?.(marks.detect(source(), ms));
       }
     }
     schedule();
@@ -96,8 +111,7 @@ export async function openVision(onStatus: (text: string) => void = () => {}): P
     stop() {
       running = false;
       stream.getTracks().forEach((t) => t.stop());
-      hands.close();
-      pose.close();
+      marks.close();
     },
   };
 }

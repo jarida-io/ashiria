@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model check</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg: #f6f7f8; --card: #fff; --ink: #1d1d1f; --muted: #6b6f76; --line: #e3e5e8; --accent: #0b6e8a; --good: #1f8a4c; --bad: #b3261e; --warn: #8a6d1f; --chip: #eef1f3; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111315; --card: #1b1e21; --ink: #eef0f2; --muted: #9aa0a6; --line: #2b2f33; --accent: #4fd1e8; --good: #5fd38d; --bad: #ff8a80; --warn: #e0c060; --chip: #24282c; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, system-ui, sans-serif; }
+  header { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .muted { color: var(--muted); }
+  .note { font-size: 13px; max-width: 70em; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  select, button { font: inherit; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+  button:disabled { opacity: 0.5; }
+  label { display: inline-flex; gap: 6px; align-items: center; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 12px 16px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .tile b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+  .tile span { font-size: 13px; color: var(--muted); }
+  #rows { padding: 4px 16px 40px; display: flex; flex-direction: column; gap: 10px; }
+  .row { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 8px 16px; }
+  .row.bad { border-color: var(--bad); }
+  .who b { font-size: 16px; }
+  .verdict { font-weight: 600; }
+  .verdict.good { color: var(--good); } .verdict.bad { color: var(--bad); } .verdict.warn { color: var(--warn); }
+  .chip { display: inline-block; background: var(--chip); border-radius: 6px; padding: 1px 7px; font-size: 12px; margin: 2px 4px 0 0; }
+  .strip { display: flex; gap: 4px; overflow-x: auto; }
+  .strip canvas { border-radius: 6px; height: 99px; width: auto; }
+  .guesses { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+  .guess { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  .guess.right { border-color: var(--good); }
+  .guess .strip canvas { height: 66px; }
+  .bar { height: 5px; border-radius: 3px; background: var(--chip); margin: 4px 0; }
+  .bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Model check on the dictionary videos</h1>
+  <div class="note muted">
+    Each clip is played through the web app's own pipeline: MediaPipe in this browser, the same tracker, the attempt
+    cutter, and the exported recogniser (<span id="run">loading</span>), which reads each sign as it is and mirrored.
+    Left: frames of the clip with the hands MediaPipe found (orange right, blue left). Below: what the model read,
+    with frames of each guess. These videos are the model's own training references, so this checks that the browser
+    pipeline sees them as training did; it is not accuracy on other people. Dev only: the videos never leave this Mac.
+  </div>
+</header>
+<div class="controls">
+  <label>Signs <select id="set">
+    <option value="course">Course signs (75)</option>
+    <option value="fingerspelling">Fingerspelling</option>
+    <option value="number">Numbers</option>
+    <option value="phrase">Recorded phrases (40 at random)</option>
+    <option value="word">Other words (40 at random)</option>
+  </select></label>
+  <label><input type="checkbox" id="mirror"> Mirror the video (a mirrored camera, or a left-handed signer)</label>
+  <label><input type="checkbox" id="misses"> Only misses</label>
+  <button class="primary" id="go" disabled>Run</button>
+  <button id="stop" disabled>Stop</button>
+  <span id="status" class="muted">Loading the model and hand tracking…</span>
+</div>
+<div class="tiles">
+  <div class="tile"><b id="t-first">–</b><span>read right first</span></div>
+  <div class="tile"><b id="t-top5">–</b><span>right sign in the top 5</span></div>
+  <div class="tile"><b id="t-sure">–</b><span>stated (not "not sure")</span></div>
+  <div class="tile"><b id="t-sim">–</b><span>mean similarity of the right sign</span></div>
+  <div class="tile"><b id="t-time">–</b><span>seconds per clip</span></div>
+</div>
+<div id="rows"></div>
+<script type="module" src="/src/results/main.ts"></script>
+</body>
+</html>

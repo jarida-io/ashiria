@@ -10,7 +10,9 @@
  *   with Approve / Reject buttons that run `ashiria approve`. /dev/study/browse: every sign in the dictionary's data
  *   sheet, with MediaPipe's landmarks drawn over its video, the reference Ashiria would cut from it, audit flags and
  *   the recogniser's results (signs.json of the newest training/runs/embed- run), and an avatar (src/avatar) that
- *   signs each clip from its landmarks, step by step in Learn mode. The videos never leave this Mac.
+ *   signs each clip from its landmarks, step by step in Learn mode. /dev/study/results plays dictionary clips through
+ *   the web app's own pipeline (MediaPipe, tracker, recogniser) and shows what it read next to frames of each clip
+ *   and of its guesses. The videos never leave this Mac.
  * - /web: the web app (web.html), a camera instead of a headset; /dev/recogniser/* and /dev/mediapipe/* serve its
  *   recogniser (training/exports/recogniser) and MediaPipe's models (training/models/mediapipe).
  *
@@ -37,7 +39,8 @@ const RECOGNISER_FILES: Record<string, string> = { 'meta.json': 'application/jso
 const MEDIAPIPE_FILES = ['hand_landmarker.task', 'pose_landmarker_full.task'];
 const REVIEW = ['approved', 'rejected', 'draft'];
 // The sign browser's index is rebuilt when these change (re-import or re-audit of the dictionary).
-const INDEX_INPUTS = ['dictionary_labels.csv', 'dictionary_audit.csv'].map((f) => join(TRAINING, 'data/dictionary/manifests', f));
+const INDEX_INPUTS = [...['dictionary_labels.csv', 'dictionary_audit.csv'].map((f) => join(TRAINING, 'data/dictionary/manifests', f)),
+  join(TRAINING, 'exports/dictionary/references/references.json')]; // the course signs (`v1` in the index)
 
 function ashiria(args: string[]): Promise<string> {
   return new Promise((ok, fail) => execFile(ASHIRIA, args, { cwd: TRAINING, maxBuffer: 64 * 1024 * 1024 },
@@ -123,6 +126,10 @@ export function ashiriaDev(): Plugin {
         try {
           if (url === '/' || url === '') return send(res, 200, readFileSync(join(__dirname, 'dev/study.html'), 'utf8'), 'text/html');
           if (url === '/browse' || url === '/browse/') return send(res, 200, readFileSync(join(__dirname, 'dev/browse.html'), 'utf8'), 'text/html');
+          if (url === '/results' || url === '/results/') {
+            const html = readFileSync(join(__dirname, 'dev/results.html'), 'utf8');
+            return send(res, 200, await server.transformIndexHtml('/dev/study/results', html), 'text/html');
+          }
           if (url === '/index.json') {
             const stamp = INDEX_INPUTS.map((f) => (existsSync(f) ? statSync(f).mtimeMs : 0)).join();
             if (stamp !== indexStamp) [indexText, indexStamp] = ['', stamp];
