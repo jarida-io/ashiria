@@ -25,3 +25,6 @@ content/packs/
 
 # Frozen copy of the training code for a run in progress (embed.py workers re-import it every epoch)
 training/.snap*/
+
+# The competition plan stays private (strategy and checklist)
+docs/HACKATHON_PLAN.md
