@@ -3,7 +3,7 @@ VENV := .venv
 BIN := $(VENV)/bin
 CONFIG ?= configs/default.yaml
 DICT := configs/ksl_dictionary.yaml
-VOCAB ?= configs/vocabulary_v1.txt
+VOCAB ?= configs/vocabulary_v2.txt
 RUN ?=
 NAME ?=
 

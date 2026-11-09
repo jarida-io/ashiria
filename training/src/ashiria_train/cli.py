@@ -35,7 +35,7 @@ def main(argv: list[str] | None = None) -> None:
     p = steps.add_parser("import-dictionary", help="labels CSV from the KSL Dictionary scrape (use configs/ksl_dictionary.yaml)")
     p.add_argument("--source", help="ksl_dictionary_data.csv (default: dictionary.source_csv in the config)")
     p = steps.add_parser("references", help="per-sign reference templates and trackability tags")
-    p.add_argument("--vocab", help="vocabulary file, e.g. configs/vocabulary_v1.txt")
+    p.add_argument("--vocab", help="vocabulary file, e.g. configs/vocabulary_v2.txt")
     steps.add_parser("golden", help="engine test vectors from synthetic hands (spec/golden/) for the C# port")
     p = steps.add_parser("calibrate", help="simulated attempts -> per-sign tau, tiers and Free Sign thresholds")
     p.add_argument("--pack", default="ksl-core")
@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None) -> None:
     p = steps.add_parser("steps-fit", help="fit the step captions' calls to the dictionary descriptions (exports/steps)")
     p.add_argument("--limit", type=int)
     p = steps.add_parser("catalogue", help="create or extend content/catalogue/<pack>.yaml from a vocabulary file")
-    p.add_argument("--vocab", default="configs/vocabulary_v1.txt")
+    p.add_argument("--vocab", default="configs/vocabulary_v2.txt")
     p.add_argument("--pack", default="ksl-core")
 
     # Accept --config after the step name as well (ashiria audit --config x.yaml).
