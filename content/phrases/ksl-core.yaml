@@ -6,7 +6,7 @@
 #   recorded: the dictionary's own video of the whole phrase, when there is one (real signing, real transitions)
 #   question: signed with a question face (raised or lowered brows), which the hands alone don't show
 # Sources: JOOUST and Kenyatta University KSL course materials, the Maseno AI4KSL paper (arXiv 2410.18295); see
-# docs/HACKATHON_PLAN.md for links.
+# docs/CONTENT.md#phrases.
 version: 0.1.0
 phrases:
 - id: good-morning
