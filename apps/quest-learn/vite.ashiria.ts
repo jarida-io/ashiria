@@ -13,11 +13,11 @@
  *   signs each clip from its landmarks, step by step in Learn mode. /dev/study/results plays dictionary clips through
  *   the web app's own pipeline (MediaPipe, tracker, recogniser) and shows what it read next to frames of each clip
  *   and of its guesses. The videos never leave this Mac.
- * - /web: the web app (web.html), a camera instead of a headset; /dev/recogniser/* and /dev/mediapipe/* serve its
- *   recogniser (training/exports/recogniser) and MediaPipe's models (training/models/mediapipe).
+ * - /dev/recogniser/* and /dev/mediapipe/*: the recogniser (training/exports/recogniser) and MediaPipe's models
+ *   (training/models/mediapipe), for the webcam preview and the model check.
  *
  * Production builds only bundle packs from public/packs/, and refuse any that is not a release pack
- * (`ashiria pack --release`: Studio-recorded, approved signs only).
+ * (`ashiria pack --release`: approved signs and phrases, with recorded permission for dictionary-derived ones).
  */
 import { execFile } from 'node:child_process';
 import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -201,12 +201,6 @@ export function ashiriaDev(): Plugin {
         }
       });
 
-      // The web app (camera instead of headset): web.html, served as is so the headset emulator isn't injected.
-      server.middlewares.use('/web', (req, res, next) => {
-        const url = (req.url ?? '/').split('?')[0];
-        if (url !== '/' && url !== '') return next();
-        return send(res, 200, readFileSync(join(__dirname, 'web.html'), 'utf8'), 'text/html');
-      });
       // The avatar coach in the app: a catalogue sign's pose and steps (`ashiria study-avatar`), dev only.
       const avatarCache = new Map<string, string>();
       server.middlewares.use('/dev/avatar', async (req, res) => {
